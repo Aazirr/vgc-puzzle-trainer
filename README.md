@@ -147,7 +147,15 @@ Use these docs for execution and governance:
 
 ## Current Status
 
-Documentation and planning are in place. Implementation should begin with Phase 0 foundations:
+Documentation, planning, and Phase 0 scaffold are in place.
+
+Completed so far:
+
+- Standalone project repository initialized and pushed
+- Monorepo/workspace skeleton created for apps and shared packages
+- Baseline contributor and environment setup files added
+
+Current Phase 0 focus:
 
 - lock contracts and migration strategy
 - build replay parsing and deterministic snapshot extraction

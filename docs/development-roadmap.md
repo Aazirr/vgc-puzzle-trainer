@@ -147,3 +147,24 @@ A milestone is done only if all are true:
 - Manual QA checklist completed
 - Monitoring/alert coverage exists for new services
 - Companion docs are updated
+
+## 7. Progress Log
+
+### 2026-04-11
+
+Completed:
+
+- Initial documentation set and companion planning docs created
+- Project initialized as its own git repository and pushed to GitHub
+- Phase 0 scaffold created:
+	- apps/web, apps/api, apps/pipeline
+	- packages/domain, packages/showdown-adapter, packages/explanations, packages/config
+	- shared root config (.gitignore, .editorconfig, tsconfig.base.json, .env.example, CONTRIBUTING.md)
+- Workspace package management initialized with npm workspaces and lockfile
+
+Next:
+
+- Add database migration tooling and first migration set
+- Implement replay tokenizer in pipeline
+- Implement deterministic battle state reconstruction and snapshot extractor
+- Add initial fixture-based deterministic tests

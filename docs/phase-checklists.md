@@ -4,9 +4,14 @@ Use these checklists to track phase completion and reduce missed dependencies.
 
 ## Phase 0 - Foundations
 
+### Progress Update (2026-04-11)
+
+- Completed: repository scaffold and monorepo workspace structure
+- In progress: DB migrations, replay tokenizer, state rebuild, snapshot extractor, fixture tests
+
 ### Build Checklist
 
-- [ ] Create app/package folder structure
+- [x] Create app/package folder structure
 - [ ] Add DB migrations for core tables
 - [ ] Implement replay log tokenizer
 - [ ] Implement Showdown-based state rebuild
