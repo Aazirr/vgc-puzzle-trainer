@@ -2,6 +2,7 @@ export type PuzzleSource = "sim" | "replay" | "community";
 export type QuestionType = "speed_check" | "ko_threshold" | "field_interaction";
 export type PuzzleStatus = "pending" | "approved" | "flagged" | "rejected";
 export type SideIdentifier = "p1" | "p2";
+export const GAME_STATE_SNAPSHOT_SCHEMA_VERSION = "1.0.0";
 
 export interface PuzzleAction {
   type: string;

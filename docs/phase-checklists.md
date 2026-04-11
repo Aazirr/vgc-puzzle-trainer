@@ -9,7 +9,8 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Completed: repository scaffold and monorepo workspace structure
 - Completed: backend app skeleton, shared contracts, initial SQL migration, migration runner, readiness endpoint
 - Completed: replay tokenizer, state rebuild, snapshot extractor, fixture tests
-- Not yet verified: migration up/down smoke test, replay fixture determinism, contract freeze
+- Completed: migration up/down smoke-test path, frozen snapshot schema version in shared contracts
+- Not yet verified: replay fixture determinism against live parser inputs
 
 ### Build Checklist
 
@@ -24,11 +25,11 @@ Use these checklists to track phase completion and reduce missed dependencies.
 
 - [x] Same replay fixture returns same snapshot output on repeated runs
 - [ ] Migration up/down smoke test passes
-- [ ] Contracts for puzzle schema and snapshot format are frozen
+- [x] Contracts for puzzle schema and snapshot format are frozen
 
 ### Status Note
 
-The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, and the replay pipeline now reconstructs deterministic snapshots from fixture logs. The next major Phase 0 task is migration smoke-testing and contract freeze.
+The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, the replay pipeline reconstructs deterministic snapshots from fixture logs, and the migration smoke-test path now exists for disposable databases.
 
 ## Phase 1 - MVP Puzzle Loop
 

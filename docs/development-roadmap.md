@@ -183,8 +183,9 @@ Completed:
 - Workspace exposes a `db:migrate` command for the API package
 - Initial schema migration runner is wired into the app codebase
 - Replay parser now tokenizes Showdown-style logs, reconstructs deterministic snapshot state, and passes fixture tests
+- API now exposes a `db:smoke-test` command for disposable-database migration verification
+- Shared snapshot contract is versioned via `GAME_STATE_SNAPSHOT_SCHEMA_VERSION = "1.0.0"`
 
 Still pending:
 
-- Migration up/down smoke test against a fresh database
-- Contract freeze for the replay snapshot shape
+- Run the migration smoke test against a fresh database
