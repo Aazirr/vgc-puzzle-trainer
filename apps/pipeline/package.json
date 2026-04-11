@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "test": "tsx --test src/replay/tokenize-log.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"Add linter in Phase 0.1\""
   },

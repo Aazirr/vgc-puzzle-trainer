@@ -182,9 +182,9 @@ Completed:
 - API can now boot with a readiness route that checks database connectivity
 - Workspace exposes a `db:migrate` command for the API package
 - Initial schema migration runner is wired into the app codebase
+- Replay parser now tokenizes Showdown-style logs, reconstructs deterministic snapshot state, and passes fixture tests
 
 Still pending:
 
-- Replay tokenizer and state reconstruction
-- Fixture-based replay determinism tests
 - Migration up/down smoke test against a fresh database
+- Contract freeze for the replay snapshot shape

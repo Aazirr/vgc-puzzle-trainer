@@ -163,9 +163,10 @@ Backend foundation includes:
 - Shared puzzle contracts in `packages/domain`
 - Initial SQL migration for core tables
 - Database client helper, migration runner, and readiness route
+- Replay tokenizer, deterministic state reconstruction, and fixture tests in the pipeline workspace
 
 Current Phase 0 focus:
 
-- lock contracts and migration strategy
-- build replay parsing and deterministic snapshot extraction
-- establish test fixtures and quality gates
+- migration up/down smoke test against a fresh database
+- freeze the replay snapshot contract
+- keep expanding fixture coverage and quality gates
