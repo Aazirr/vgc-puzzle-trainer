@@ -158,6 +158,8 @@ Completed so far:
 - `.env.example` and workspace TypeScript configuration are in place
 - Replay parser, migration runner, and smoke-test path are implemented
 - Showdown engine is now present as a git submodule
+- Showdown adapter wiring compiles across all workspaces
+- Root workspace build now passes
 
 Backend foundation includes:
 
@@ -171,6 +173,5 @@ Backend foundation includes:
 
 Current Phase 0 focus:
 
-- wire parser and pipeline imports to the Showdown submodule
 - run the migration smoke test against a fresh database
 - keep expanding fixture coverage and quality gates

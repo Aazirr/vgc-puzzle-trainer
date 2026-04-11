@@ -13,7 +13,9 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Completed: .env.example with required environment variable keys
 - Completed: TypeScript configuration across workspaces
 - Completed: Showdown engine added as git submodule
-- Not yet verified: replay fixture determinism against live parser inputs, submodule imports in pipeline/parser workspaces
+- Completed: Showdown submodule imports correctly in pipeline and parser workspaces
+- Completed: TypeScript compiles with zero errors across all workspaces
+- Not yet verified: replay fixture determinism against live parser inputs
 
 ### Build Checklist
 
@@ -33,7 +35,7 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [x] Same replay fixture returns same snapshot output on repeated runs
 - [ ] Migration up/down smoke test passes
 - [x] Contracts for puzzle schema and snapshot format are frozen
-- [ ] Showdown submodule imports correctly in pipeline and parser workspaces
+- [x] Showdown submodule imports correctly in pipeline and parser workspaces
 - [x] TypeScript compiles with zero errors across all workspaces
 
 ### Status Note

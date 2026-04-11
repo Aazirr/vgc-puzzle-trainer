@@ -230,8 +230,8 @@ Completed:
 - Workspace TypeScript configuration is in place across the monorepo
 - `apps/web` builds successfully and picked up the expected Next.js TypeScript include update
 - Showdown engine has been added as a git submodule
+- Showdown adapter wiring now compiles and the full root workspace build passes
 
 Still pending:
 
 - Run the migration smoke test against a fresh database
-- Wire parser and pipeline imports to the Showdown submodule
