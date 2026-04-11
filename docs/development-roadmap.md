@@ -174,3 +174,17 @@ Next:
 - Implement replay tokenizer in pipeline
 - Implement deterministic battle state reconstruction and snapshot extractor
 - Add initial fixture-based deterministic tests
+
+### 2026-04-11 - Backend Follow-up
+
+Completed:
+
+- API can now boot with a readiness route that checks database connectivity
+- Workspace exposes a `db:migrate` command for the API package
+- Initial schema migration runner is wired into the app codebase
+
+Still pending:
+
+- Replay tokenizer and state reconstruction
+- Fixture-based replay determinism tests
+- Migration up/down smoke test against a fresh database
