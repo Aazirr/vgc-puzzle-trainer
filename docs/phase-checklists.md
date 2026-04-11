@@ -7,7 +7,7 @@ Use these checklists to track phase completion and reduce missed dependencies.
 ### Progress Update (2026-04-11)
 
 - Completed: repository scaffold and monorepo workspace structure
-- Completed: backend app skeleton, shared contracts, initial SQL migration
+- Completed: backend app skeleton, shared contracts, initial SQL migration, migration runner, readiness endpoint
 - In progress: replay tokenizer, state rebuild, snapshot extractor, fixture tests
 
 ### Build Checklist

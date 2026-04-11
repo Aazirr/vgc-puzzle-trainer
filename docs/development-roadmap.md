@@ -166,10 +166,11 @@ Completed:
 	- health route and puzzle contract route stubs
 	- shared backend-facing puzzle contracts in `packages/domain`
 	- initial SQL migration for core schema
+	- database client helper, migration runner, and readiness route
 
 Next:
 
-- Add database migration tooling and first migration set
+- Add replay tokenizer and state reconstruction foundation
 - Implement replay tokenizer in pipeline
 - Implement deterministic battle state reconstruction and snapshot extractor
 - Add initial fixture-based deterministic tests

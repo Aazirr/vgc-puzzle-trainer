@@ -162,6 +162,7 @@ Backend foundation includes:
 - Health route and puzzle contract route stubs
 - Shared puzzle contracts in `packages/domain`
 - Initial SQL migration for core tables
+- Database client helper, migration runner, and readiness route
 
 Current Phase 0 focus:
 

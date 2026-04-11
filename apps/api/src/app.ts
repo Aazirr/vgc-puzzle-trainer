@@ -1,6 +1,7 @@
 import express from "express";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerPuzzleRoutes } from "./routes/puzzles.js";
+import { registerReadyRoutes } from "./routes/ready.js";
 
 export function createApiApp() {
   const app = express();
@@ -11,6 +12,7 @@ export function createApiApp() {
   });
 
   registerHealthRoutes(app);
+  registerReadyRoutes(app);
   registerPuzzleRoutes(app);
 
   return app;
