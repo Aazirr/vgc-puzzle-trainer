@@ -17,12 +17,18 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Implement Showdown-based state rebuild
 - [ ] Implement snapshot extractor
 - [ ] Add fixture-based deterministic tests
+- [ ] Add .env.example with all required environment variable keys
+- [ ] Configure TypeScript (tsconfig.json) across workspaces
+- [ ] Add Showdown engine as git submodule
+- [ ] Define and freeze shared TypeScript interfaces in contracts package
 
 ### Validation Checklist
 
 - [ ] Same replay fixture returns same snapshot output on repeated runs
 - [ ] Migration up/down smoke test passes
 - [ ] Contracts for puzzle schema and snapshot format are frozen
+- [ ] Showdown submodule imports correctly in pipeline and parser workspaces
+- [ ] TypeScript compiles with zero errors across all workspaces
 
 ## Phase 1 - MVP Puzzle Loop
 
@@ -34,6 +40,9 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Build explanation reveal panel
 - [ ] Seed 10-20 approved hand-curated puzzles
 - [ ] Record attempts for guest and account flows
+- [ ] Implement templated explanation renderer for speed_check and ko_threshold types
+- [ ] Shuffle answer choices server-side before sending to client
+- [ ] Add difficulty tag filtering to puzzle list endpoint
 
 ### Validation Checklist
 
@@ -41,6 +50,9 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Correctness and explanation are returned only after answer submit
 - [ ] Guest flow works with token tracking
 - [ ] Authenticated attempt history persists
+- [ ] All 16 damage rolls confirmed fully above or below HP threshold on seeded KO puzzles
+- [ ] Answer choices arrive shuffled and without a correct label in the payload
+- [ ] Explanation template renders correctly for speed_check and ko_threshold
 
 ## Phase 2 - Simulation Supply
 
@@ -51,12 +63,19 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Connect curation filter and rejection reasons
 - [ ] Add duplicate detection hash
 - [ ] Write pending candidates to DB queue
+- [ ] Implement hard KO threshold roll check using all 16 damage rolls
+- [ ] Implement speed check detector with field-condition-aware effective speed calculation
+- [ ] Add team pool input from JSON files of VGC teams
+- [ ] Add curation trivial-puzzle filter to reject too-easy candidates by margin threshold
 
 ### Validation Checklist
 
 - [ ] Nightly schedule executes successfully
 - [ ] Candidate counts and acceptance ratio are logged
 - [ ] Pending queue receives simulation output
+- [ ] Partial range KO candidates are rejected and logged with reason
+- [ ] Speed check detector correctly applies Tailwind, Trick Room, paralysis, and stat boosts
+- [ ] No sim-generated puzzle enters the DB without a difficulty and at least one tag
 
 ## Phase 3 - Accounts and Progression
 
@@ -66,12 +85,14 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Implement streak update logic
 - [ ] Implement user dashboard (streak, history)
 - [ ] Add puzzle filters by type/tag/difficulty
+- [ ] Lock design-tokens.css before any frontend work begins
 
 ### Validation Checklist
 
 - [ ] Account upgrade from guest keeps progression continuity
 - [ ] Streak increments and resets correctly
 - [ ] Filter queries match expected results and latency budget
+- [ ] Filters work correctly under Trick Room
 
 ## Phase 4 - Community and Moderation
 
@@ -82,12 +103,18 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Implement moderator actions and audit metadata
 - [ ] Implement vote endpoint and auto-approval logic
 - [ ] Implement flag flow that returns puzzle to review
+- [ ] Add rejection_reason field populated on all rejected community submissions
+- [ ] Notify submitter when puzzle is rejected, approved, or flagged
+- [ ] Add moderator seed group setup with initial moderator roles in DB
 
 ### Validation Checklist
 
 - [ ] Read-dependent and partial-range submissions are blocked
 - [ ] Moderation actions update status consistently
 - [ ] Auto-approval threshold and ratio logic tested
+- [ ] Submitter receives rejection reason on blocked puzzles
+- [ ] A puzzle flagged after approval returns to pending status, not rejected
+- [ ] A single user cannot vote on the same puzzle twice
 
 ## Phase 5 - AI Explanation Enrichment
 
@@ -97,12 +124,16 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Store ai_text alongside mechanical explanation
 - [ ] Add frontend rendering logic for optional ai_text
 - [ ] Add feature flag and rollback toggle
+- [ ] Add human review step before AI-enriched text goes live
+- [ ] Log all Anthropic API calls with puzzle ID for auditing
 
 ### Validation Checklist
 
 - [ ] AI text appears only for approved puzzles
 - [ ] Failed calls are retried and logged
 - [ ] Turning off feature flag immediately hides ai_text
+- [ ] AI text is blocked from publishing if the enrichment call fails or returns empty
+- [ ] An incorrect AI explanation flagged by community triggers re-review
 
 ## Cross-Phase Release Checklist
 
@@ -110,3 +141,8 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] API contract changes communicated
 - [ ] Monitoring and alerts configured for changed services
 - [ ] Documentation updated in companion docs
+- [ ] Non-affiliation legal disclaimer appears in site footer on every page
+- [ ] No official Pokemon sprites or artwork are used anywhere in the UI
+- [ ] DATABASE_URL points to a separate Railway PostgreSQL service, not app container
+- [ ] Prisma migrations run on deploy without force: true or synchronize: true
+- [ ] Domain name does not include the word Pokemon
