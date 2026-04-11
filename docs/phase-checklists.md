@@ -10,7 +10,10 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Completed: backend app skeleton, shared contracts, initial SQL migration, migration runner, readiness endpoint
 - Completed: replay tokenizer, state rebuild, snapshot extractor, fixture tests
 - Completed: migration up/down smoke-test path, frozen snapshot schema version in shared contracts
-- Not yet verified: replay fixture determinism against live parser inputs
+- Completed: .env.example with required environment variable keys
+- Completed: TypeScript configuration across workspaces
+- Completed: Showdown engine added as git submodule
+- Not yet verified: replay fixture determinism against live parser inputs, submodule imports in pipeline/parser workspaces
 
 ### Build Checklist
 
@@ -20,9 +23,9 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [x] Implement Showdown-based state rebuild
 - [x] Implement snapshot extractor
 - [x] Add fixture-based deterministic tests
-- [ ] Add .env.example with all required environment variable keys
-- [ ] Configure TypeScript (tsconfig.json) across workspaces
-- [ ] Add Showdown engine as git submodule
+- [x] Add .env.example with all required environment variable keys
+- [x] Configure TypeScript (tsconfig.json) across workspaces
+- [x] Add Showdown engine as git submodule
 - [ ] Define and freeze shared TypeScript interfaces in contracts package
 
 ### Validation Checklist
@@ -31,11 +34,11 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [ ] Migration up/down smoke test passes
 - [x] Contracts for puzzle schema and snapshot format are frozen
 - [ ] Showdown submodule imports correctly in pipeline and parser workspaces
-- [ ] TypeScript compiles with zero errors across all workspaces
+- [x] TypeScript compiles with zero errors across all workspaces
 
 ### Status Note
 
-The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, the replay pipeline reconstructs deterministic snapshots from fixture logs, and the migration smoke-test path now exists for disposable databases.
+The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, the replay pipeline reconstructs deterministic snapshots from fixture logs, the migration smoke-test path now exists for disposable databases, and workspace TypeScript configuration is validated.
 
 ## Phase 1 - MVP Puzzle Loop
 

@@ -155,6 +155,9 @@ Completed so far:
 - Monorepo/workspace skeleton created for apps and shared packages
 - Baseline contributor and environment setup files added
 - Backend foundation started on branch `backend-phase-0`
+- `.env.example` and workspace TypeScript configuration are in place
+- Replay parser, migration runner, and smoke-test path are implemented
+- Showdown engine is now present as a git submodule
 
 Backend foundation includes:
 
@@ -164,9 +167,10 @@ Backend foundation includes:
 - Initial SQL migration for core tables
 - Database client helper, migration runner, and readiness route
 - Replay tokenizer, deterministic state reconstruction, and fixture tests in the pipeline workspace
+- Writable migration smoke-test path for disposable databases
 
 Current Phase 0 focus:
 
-- migration up/down smoke test against a fresh database
-- freeze the replay snapshot contract
+- wire parser and pipeline imports to the Showdown submodule
+- run the migration smoke test against a fresh database
 - keep expanding fixture coverage and quality gates

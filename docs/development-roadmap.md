@@ -226,7 +226,12 @@ Completed:
 - Replay parser now tokenizes Showdown-style logs, reconstructs deterministic snapshot state, and passes fixture tests
 - API now exposes a `db:smoke-test` command for disposable-database migration verification
 - Shared snapshot contract is versioned via `GAME_STATE_SNAPSHOT_SCHEMA_VERSION = "1.0.0"`
+- `.env.example` now contains the required environment variable keys
+- Workspace TypeScript configuration is in place across the monorepo
+- `apps/web` builds successfully and picked up the expected Next.js TypeScript include update
+- Showdown engine has been added as a git submodule
 
 Still pending:
 
 - Run the migration smoke test against a fresh database
+- Wire parser and pipeline imports to the Showdown submodule
