@@ -7,12 +7,13 @@ Use these checklists to track phase completion and reduce missed dependencies.
 ### Progress Update (2026-04-11)
 
 - Completed: repository scaffold and monorepo workspace structure
-- In progress: DB migrations, replay tokenizer, state rebuild, snapshot extractor, fixture tests
+- Completed: backend app skeleton, shared contracts, initial SQL migration
+- In progress: replay tokenizer, state rebuild, snapshot extractor, fixture tests
 
 ### Build Checklist
 
 - [x] Create app/package folder structure
-- [ ] Add DB migrations for core tables
+- [x] Add DB migrations for core tables
 - [ ] Implement replay log tokenizer
 - [ ] Implement Showdown-based state rebuild
 - [ ] Implement snapshot extractor

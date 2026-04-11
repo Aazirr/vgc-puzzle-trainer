@@ -161,6 +161,11 @@ Completed:
 	- packages/domain, packages/showdown-adapter, packages/explanations, packages/config
 	- shared root config (.gitignore, .editorconfig, tsconfig.base.json, .env.example, CONTRIBUTING.md)
 - Workspace package management initialized with npm workspaces and lockfile
+- Backend foundation started on branch `backend-phase-0`:
+	- structured Express app bootstrap
+	- health route and puzzle contract route stubs
+	- shared backend-facing puzzle contracts in `packages/domain`
+	- initial SQL migration for core schema
 
 Next:
 

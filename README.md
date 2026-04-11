@@ -154,6 +154,14 @@ Completed so far:
 - Standalone project repository initialized and pushed
 - Monorepo/workspace skeleton created for apps and shared packages
 - Baseline contributor and environment setup files added
+- Backend foundation started on branch `backend-phase-0`
+
+Backend foundation includes:
+
+- Structured Express app bootstrap for the API service
+- Health route and puzzle contract route stubs
+- Shared puzzle contracts in `packages/domain`
+- Initial SQL migration for core tables
 
 Current Phase 0 focus:
 
