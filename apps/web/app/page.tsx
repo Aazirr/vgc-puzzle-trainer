@@ -307,13 +307,13 @@ const PokemonCard = memo(function PokemonCard({
       </div>
 
       {/* speed */}
-      <div style={{ marginTop: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#5a5a7a" }}>
+      <div style={{ marginTop: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#5a5a7a" }}>
         <span style={{ color: "#7dd3fc" }}>SPD</span> {mon.speed}
       </div>
 
       {/* item */}
       {mon.item && (
-        <div style={{ marginTop: 3, fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "#4a4a6a", textAlign: "center", maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ marginTop: 3, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#4a4a6a", textAlign: "center", maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {sanitize(mon.item)}
         </div>
       )}
@@ -711,8 +711,8 @@ export default function Page() {
             marginTop: 44, borderTop: "1px solid #0e1020", paddingTop: 16,
             display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8,
           }}>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "#151825", letterSpacing: 2 }}>VGC PUZZLE TRAINER · DOUBLES ONLY · REG G</span>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "#151825", letterSpacing: 1 }}>SPRITES VIA POKEAPI.CO</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#151825", letterSpacing: 2 }}>VGC PUZZLE TRAINER · DOUBLES ONLY · REG G</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#151825", letterSpacing: 1 }}>SPRITES VIA POKEAPI.CO</span>
           </footer>
         </div>
       </div>
