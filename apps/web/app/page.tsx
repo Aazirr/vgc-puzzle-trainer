@@ -247,7 +247,7 @@ const PokemonCard = memo(function PokemonCard({
     return () => { alive = false; };
   }, [mon.name]);
 
-  const primary = mon.types[0];
+  const primary = mon.types[0] ?? "Normal";
   const accent = TYPE_COLORS[primary] ?? "#4a4a5a";
   const hpPct = Math.round((mon.hp / mon.max_hp) * 100);
 
@@ -520,6 +520,9 @@ export default function Page() {
   const [done, setDone]         = useState(false);
 
   const puzzle = PUZZLES[idx];
+  if (!puzzle) {
+    return null;
+  }
   const qMeta = QUESTION_LABELS[puzzle.question_type] ?? { label: "PUZZLE", color: "#aaa" };
   const wasCorrect = revealed
     ? (puzzle.actions.find((a) => a.id === selected)?.correct ?? false)

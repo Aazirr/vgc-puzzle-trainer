@@ -16,7 +16,8 @@ interface BattleFieldProps {
  */
 export function BattleField({ gameState, playerSide }: BattleFieldProps) {
   const playerSideData = gameState[playerSide];
-  const opponentSideData = opponentSide;
+  const opponentSide = playerSide === "p1" ? "p2" : "p1";
+  const opponentSideData = gameState[opponentSide];
 
   return (
     <div className={styles.container}>
@@ -85,9 +86,9 @@ export function BattleField({ gameState, playerSide }: BattleFieldProps) {
         )}
 
         {/* Side Conditions */}
-        {playerSideData.sideConditions.length > 0 && (
+        {opponentSideData.sideConditions.length > 0 && (
           <div className={styles.sideConditions}>
-            {playerSideData.sideConditions.map((condition) => (
+            {opponentSideData.sideConditions.map((condition) => (
               <span key={condition} className={styles.condition}>
                 {condition}
               </span>
