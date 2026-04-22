@@ -1,17 +1,11 @@
 import { PuzzlePage } from "../../../components/PuzzlePage";
 import { getPuzzleById, getStaticPuzzleIds } from "@/lib/puzzles";
 
-interface PuzzlePageParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
 /**
  * Puzzle page layout
  * Fetches puzzle data and renders the puzzle UI
  */
-export default async function Page({ params }: PuzzlePageParams) {
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const puzzle = getPuzzleById(id);
   if (!puzzle) {
