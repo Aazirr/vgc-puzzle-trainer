@@ -10,6 +10,53 @@ const OFFICIAL_ARTWORK =
   "https://raw.githubusercontent.com/PokeAPI/sprites/master/pokemon/other/official-artwork";
 const OFFICIAL_SPRITES =
   "https://raw.githubusercontent.com/PokeAPI/sprites/master/pokemon";
+const POKEMON_NAME_OVERRIDES: Record<string, string> = {
+  "flutter mane": "flutter-mane",
+  "iron hands": "iron-hands",
+  "urshifu-rapid": "urshifu-rapid-strike",
+  "calyrex-ice": "calyrex-ice-rider",
+  "calyrex-shadow": "calyrex-shadow-rider",
+  "indeedee-f": "indeedee-female",
+  "indeedee-m": "indeedee-male",
+  "tauros-paldea-aqua": "tauros-paldea-aqua-breed",
+  "tauros-paldea-blaze": "tauros-paldea-blaze-breed",
+  "tauros-paldea-combat": "tauros-paldea-combat-breed",
+  "landorus-therian-forme": "landorus-therian",
+  "thundurus-therian-forme": "thundurus-therian",
+  "tornadus-therian-forme": "tornadus-therian",
+  "enamorus-therian-forme": "enamorus-therian",
+  "landorus-incarnate-forme": "landorus-incarnate",
+  "thundurus-incarnate-forme": "thundurus-incarnate",
+  "tornadus-incarnate-forme": "tornadus-incarnate",
+  "giratina-origin-forme": "giratina-origin",
+  "shaymin-sky-forme": "shaymin-sky",
+  "basculegion-f": "basculegion-female",
+};
+const FORM_SUFFIX_REPLACEMENTS: Array<[string, string]> = [
+  ["-alolan", "-alola"],
+  ["-galarian", "-galar"],
+  ["-hisuian", "-hisui"],
+  ["-paldean", "-paldea"],
+  ["-therian-forme", "-therian"],
+  ["-incarnate-forme", "-incarnate"],
+  ["-origin-forme", "-origin"],
+  ["-altered-forme", "-altered"],
+  ["-sky-forme", "-sky"],
+  ["-rapid", "-rapid-strike"],
+  ["-single", "-single-strike"],
+  ["-aqua", "-aqua-breed"],
+  ["-blaze", "-blaze-breed"],
+  ["-combat", "-combat-breed"],
+];
+const FORM_PREFIX_REPLACEMENTS: Array<[string, string]> = [
+  ["alolan-", "-alola"],
+  ["galarian-", "-galar"],
+  ["hisuian-", "-hisui"],
+  ["paldean-", "-paldea"],
+  ["therian-", "-therian"],
+  ["incarnate-", "-incarnate"],
+  ["origin-", "-origin"],
+];
 
 // In-memory cache with TTL
 const cache = new Map<string, { data: unknown; expires: number }>();
@@ -42,6 +89,34 @@ interface PokemonData {
 interface SpeciesData {
   name: string;
   id: number;
+}
+
+function normalizePokemonName(pokemonName: string): string {
+  const lower = pokemonName.toLowerCase().trim();
+  if (POKEMON_NAME_OVERRIDES[lower]) {
+    return POKEMON_NAME_OVERRIDES[lower];
+  }
+
+  const normalized = lower
+    .replace(/[.'`]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-")
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  const withOverride = POKEMON_NAME_OVERRIDES[normalized] || normalized;
+  for (const [fromSuffix, toSuffix] of FORM_SUFFIX_REPLACEMENTS) {
+    if (withOverride.endsWith(fromSuffix)) {
+      return `${withOverride.slice(0, -fromSuffix.length)}${toSuffix}`;
+    }
+  }
+  for (const [fromPrefix, toSuffix] of FORM_PREFIX_REPLACEMENTS) {
+    if (withOverride.startsWith(fromPrefix)) {
+      return `${withOverride.slice(fromPrefix.length)}${toSuffix}`;
+    }
+  }
+  return withOverride;
 }
 
 /**
@@ -93,7 +168,7 @@ export function getPokemonSpriteUrl(
   pokemonName: string,
   variant: "official" | "animated" = "official"
 ): string {
-  const normalized = pokemonName.toLowerCase().replace(/[^\w-]/g, "");
+  const normalized = normalizePokemonName(pokemonName);
 
   if (variant === "official") {
     return `${OFFICIAL_ARTWORK}/${normalized}.png`;
@@ -112,7 +187,8 @@ export async function getPokemonData(
   spriteUrl: string;
   types: string[];
 } | null> {
-  const url = `${POKEAPI_BASE}/pokemon/${pokemonName.toLowerCase()}`;
+  const normalized = normalizePokemonName(pokemonName);
+  const url = `${POKEAPI_BASE}/pokemon/${normalized}`;
   const data = await fetchWithCache<PokemonData>(url);
 
   if (!data) {

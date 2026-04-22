@@ -71,21 +71,129 @@ const sanitize = (s: string) =>
 
 const POKEAPI_ORIGIN = "https://pokeapi.co";
 const pokeCache = new Map<string, string | null>();
+const POKEAPI_NAME_OVERRIDES: Record<string, string[]> = {
+  "flutter mane": ["flutter-mane"],
+  "iron hands": ["iron-hands"],
+  "urshifu-rapid": ["urshifu-rapid-strike"],
+  "calyrex-ice": ["calyrex-ice-rider"],
+  "calyrex-shadow": ["calyrex-shadow-rider"],
+  "indeedee-f": ["indeedee-female"],
+  "indeedee-m": ["indeedee-male"],
+  "tauros-paldea-aqua": ["tauros-paldea-aqua-breed"],
+  "tauros-paldea-blaze": ["tauros-paldea-blaze-breed"],
+  "tauros-paldea-combat": ["tauros-paldea-combat-breed"],
+  "landorus-therian-forme": ["landorus-therian"],
+  "thundurus-therian-forme": ["thundurus-therian"],
+  "tornadus-therian-forme": ["tornadus-therian"],
+  "enamorus-therian-forme": ["enamorus-therian"],
+  "landorus-incarnate-forme": ["landorus-incarnate"],
+  "thundurus-incarnate-forme": ["thundurus-incarnate"],
+  "tornadus-incarnate-forme": ["tornadus-incarnate"],
+  "giratina-origin-forme": ["giratina-origin"],
+  "shaymin-sky-forme": ["shaymin-sky"],
+  "basculegion-f": ["basculegion-female"],
+};
+const FORM_SUFFIX_REPLACEMENTS: Array<[string, string]> = [
+  ["-alolan", "-alola"],
+  ["-galarian", "-galar"],
+  ["-hisuian", "-hisui"],
+  ["-paldean", "-paldea"],
+  ["-therian-forme", "-therian"],
+  ["-incarnate-forme", "-incarnate"],
+  ["-origin-forme", "-origin"],
+  ["-altered-forme", "-altered"],
+  ["-sky-forme", "-sky"],
+  ["-rapid", "-rapid-strike"],
+  ["-single", "-single-strike"],
+  ["-aqua", "-aqua-breed"],
+  ["-blaze", "-blaze-breed"],
+  ["-combat", "-combat-breed"],
+];
+const FORM_PREFIX_REPLACEMENTS: Array<[string, string]> = [
+  ["alolan-", "-alola"],
+  ["galarian-", "-galar"],
+  ["hisuian-", "-hisui"],
+  ["paldean-", "-paldea"],
+  ["therian-", "-therian"],
+  ["incarnate-", "-incarnate"],
+  ["origin-", "-origin"],
+];
+
+function toPokeSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[.'`]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-")
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function getPokeCandidates(name: string): string[] {
+  const raw = name.toLowerCase().trim();
+  const slug = toPokeSlug(name);
+  const candidates = new Set<string>();
+
+  if (slug) candidates.add(slug);
+  if (raw) {
+    const compact = raw.replace(/[^a-z0-9]/g, "");
+    if (compact) candidates.add(compact);
+  }
+  for (const alias of POKEAPI_NAME_OVERRIDES[raw] ?? []) candidates.add(alias);
+  for (const alias of POKEAPI_NAME_OVERRIDES[slug] ?? []) candidates.add(alias);
+
+  for (const [fromSuffix, toSuffix] of FORM_SUFFIX_REPLACEMENTS) {
+    if (slug.endsWith(fromSuffix)) {
+      candidates.add(`${slug.slice(0, -fromSuffix.length)}${toSuffix}`);
+    }
+  }
+  for (const [fromPrefix, toSuffix] of FORM_PREFIX_REPLACEMENTS) {
+    if (slug.startsWith(fromPrefix)) {
+      candidates.add(`${slug.slice(fromPrefix.length)}${toSuffix}`);
+    }
+  }
+
+  if (slug.endsWith("-f")) candidates.add(`${slug.slice(0, -2)}-female`);
+  if (slug.endsWith("-m")) candidates.add(`${slug.slice(0, -2)}-male`);
+  if (slug.endsWith("-rapid")) candidates.add(`${slug}-strike`);
+  if (slug.endsWith("-ice")) candidates.add(`${slug}-rider`);
+
+  return Array.from(candidates);
+}
+
+async function fetchSpriteForCandidate(candidate: string): Promise<string | null> {
+  const url = new URL(`/api/v2/pokemon/${encodeURIComponent(candidate)}`, POKEAPI_ORIGIN);
+  if (url.origin !== POKEAPI_ORIGIN) return null;
+
+  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  return (
+    data?.sprites?.other?.["official-artwork"]?.front_default ??
+    data?.sprites?.front_default ??
+    null
+  );
+}
 
 async function fetchSprite(name: string): Promise<string | null> {
-  const key = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const key = toPokeSlug(name);
   if (pokeCache.has(key)) return pokeCache.get(key) ?? null;
+
+  const candidates = getPokeCandidates(name);
   try {
-    const url = new URL(`/api/v2/pokemon/${encodeURIComponent(key)}`, POKEAPI_ORIGIN);
-    if (url.origin !== POKEAPI_ORIGIN) return null;
-    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-    if (!res.ok) { pokeCache.set(key, null); return null; }
-    const data = await res.json();
-    const sprite: string | null =
-      data?.sprites?.other?.["official-artwork"]?.front_default ??
-      data?.sprites?.front_default ?? null;
-    pokeCache.set(key, sprite);
-    return sprite;
+    for (const candidate of candidates) {
+      const sprite = await fetchSpriteForCandidate(candidate);
+      if (sprite) {
+        pokeCache.set(key, sprite);
+        pokeCache.set(candidate, sprite);
+        return sprite;
+      }
+    }
+    pokeCache.set(key, null);
+    return null;
   } catch {
     pokeCache.set(key, null);
     return null;
@@ -256,7 +364,7 @@ const PokemonCard = memo(function PokemonCard({
       display: "flex", flexDirection: "column", alignItems: "center",
       background: `linear-gradient(155deg, #0b0d16 0%, ${accent}14 100%)`,
       border: `1px solid ${accent}28`, borderRadius: 12,
-      padding: "14px 12px 12px", minWidth: 112, flex: 1, position: "relative",
+      padding: "var(--card-padding)", minWidth: "var(--card-min-width)", flex: 1, position: "relative",
     }}>
       {/* side label */}
       <span style={{
@@ -271,10 +379,10 @@ const PokemonCard = memo(function PokemonCard({
       )}
 
       {/* sprite */}
-      <div style={{ width: 72, height: 72, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
+      <div style={{ width: "var(--card-sprite)", height: "var(--card-sprite)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
         {sprite
-          ? <img src={sprite} alt={sanitize(mon.name)} width={72} height={72} loading="lazy" decoding="async"
-              style={{ objectFit: "contain", filter: side === "opp" ? "brightness(0.82) hue-rotate(170deg)" : "none" }} />
+          ? <img src={sprite} alt={sanitize(mon.name)} loading="lazy" decoding="async"
+              style={{ width: "100%", height: "100%", objectFit: "contain", filter: side === "opp" ? "brightness(0.82) hue-rotate(170deg)" : "none" }} />
           : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#1a1a2a", animation: "pulse 1.5s infinite" }} />
         }
       </div>
@@ -313,7 +421,7 @@ const PokemonCard = memo(function PokemonCard({
 
       {/* item */}
       {mon.item && (
-        <div style={{ marginTop: 3, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#4a4a6a", textAlign: "center", maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ marginTop: 3, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#4a4a6a", textAlign: "center", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {sanitize(mon.item)}
         </div>
       )}
@@ -356,7 +464,7 @@ function BattleField({ gs }: { gs: GameState }) {
     <div style={{
       background: "linear-gradient(180deg, #05070f 0%, #0b0d18 50%, #05070f 100%)",
       border: "1px solid #151825", borderRadius: 14,
-      padding: "20px 16px 16px", position: "relative", overflow: "hidden",
+      padding: "var(--battle-padding)", position: "relative", overflow: "hidden",
     }}>
       {/* grid */}
       <div style={{
@@ -365,17 +473,20 @@ function BattleField({ gs }: { gs: GameState }) {
         backgroundSize: "20px 20px", pointerEvents: "none",
       }} />
 
-      <div style={{ display: "flex", gap: 10, justifyContent: "space-between", position: "relative", zIndex: 1 }}>
+      <div className="battle-main" style={{
+        display: "flex", gap: "var(--battle-gap)", justifyContent: "space-between",
+        position: "relative", zIndex: 1,
+      }}>
         {/* player side */}
-        <div style={{ display: "flex", gap: 8, flex: 1 }}>
+        <div style={{ display: "flex", gap: "var(--battle-side-gap)", flex: 1, width: "100%" }}>
           {gs.your_side.map((m) => <PokemonCard key={m.name} mon={m} side="player" />)}
         </div>
 
         {/* VS */}
-        <div style={{ display: "flex", alignItems: "center", padding: "0 6px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#1e2035", letterSpacing: 2 }}>VS</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--battle-vs-padding)", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#1e2035", letterSpacing: 2 }}>VS</div>
 
         {/* opp side */}
-        <div style={{ display: "flex", gap: 8, flex: 1, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: "var(--battle-side-gap)", flex: 1, justifyContent: "flex-end", width: "100%" }}>
           {gs.opp_side.map((m) => <PokemonCard key={m.name} mon={m} side="opp" />)}
         </div>
       </div>
@@ -400,9 +511,9 @@ function AnswerBtn({
       disabled={revealed}
       aria-pressed={selected}
       style={{
-        width: "100%", textAlign: "left", padding: "13px 16px",
+        width: "100%", textAlign: "left", padding: "var(--answer-padding)",
         background: bg, border: `1px solid ${border}`, borderRadius: 9,
-        color, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, letterSpacing: 0.2,
+        color, fontFamily: "'IBM Plex Mono', monospace", fontSize: "var(--answer-font-size)", letterSpacing: 0.2,
         cursor: revealed ? "default" : "pointer", transition: "all 0.18s ease",
         display: "flex", alignItems: "center", gap: 12, outline: "none",
       }}
@@ -556,6 +667,25 @@ export default function Page() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        :root {
+          --app-max-width: 760px;
+          --app-padding-y: 28px;
+          --app-padding-x: 16px;
+          --app-padding-bottom: 60px;
+          --card-padding: 14px 12px 12px;
+          --card-min-width: 112px;
+          --card-sprite: 72px;
+          --battle-padding: 20px 16px 16px;
+          --battle-gap: 10px;
+          --battle-side-gap: 8px;
+          --battle-vs-padding: 0 6px;
+          --puzzle-title-size: 22px;
+          --scenario-padding: 16px 18px;
+          --scenario-text-size: 14px;
+          --answer-padding: 13px 16px;
+          --answer-font-size: 12px;
+          --footer-margin-top: 44px;
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         body { background: #04060e; color: #e0e0f0; font-family: 'Syne', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -565,15 +695,58 @@ export default function Page() {
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #04060e; }
         ::-webkit-scrollbar-thumb { background: #151825; border-radius: 3px; }
+        .battle-main { flex-direction: row; align-items: center; }
+        @media (max-width: 860px) {
+          :root {
+            --app-max-width: 100%;
+            --app-padding-y: 18px;
+            --app-padding-x: 10px;
+            --app-padding-bottom: 36px;
+            --card-padding: 10px 8px 8px;
+            --card-min-width: 0px;
+            --card-sprite: 58px;
+            --battle-padding: 14px 10px 12px;
+            --battle-gap: 12px;
+            --battle-side-gap: 6px;
+            --battle-vs-padding: 2px 0;
+            --puzzle-title-size: 19px;
+            --scenario-padding: 14px 12px;
+            --scenario-text-size: 13px;
+            --answer-padding: 11px 12px;
+            --answer-font-size: 11px;
+            --footer-margin-top: 28px;
+          }
+          .battle-main { flex-direction: column; align-items: stretch; }
+        }
+        @media (min-width: 1280px) {
+          :root {
+            --app-max-width: 1160px;
+            --app-padding-y: 42px;
+            --app-padding-x: 24px;
+            --app-padding-bottom: 84px;
+            --card-padding: 18px 16px 16px;
+            --card-min-width: 130px;
+            --card-sprite: 86px;
+            --battle-padding: 28px 24px 22px;
+            --battle-gap: 14px;
+            --battle-side-gap: 10px;
+            --puzzle-title-size: 30px;
+            --scenario-padding: 20px 24px;
+            --scenario-text-size: 16px;
+            --answer-padding: 16px 20px;
+            --answer-font-size: 14px;
+            --footer-margin-top: 56px;
+          }
+        }
       `}</style>
 
       <div style={{
         minHeight: "100vh",
         background: "radial-gradient(ellipse at 15% 8%, #080e28 0%, #04060e 55%)",
-        padding: "28px 16px 60px",
+        padding: "var(--app-padding-y) var(--app-padding-x) var(--app-padding-bottom)",
         display: "flex", justifyContent: "center",
       }}>
-        <div style={{ width: "100%", maxWidth: 700 }}>
+        <div style={{ width: "100%", maxWidth: "var(--app-max-width)" }}>
 
           {/* ── HEADER ── */}
           <header style={{
@@ -629,7 +802,7 @@ export default function Page() {
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, letterSpacing: 3, color: "#4a7fff", marginBottom: 6 }}>
                   PUZZLE {idx + 1} / {PUZZLES.length} — {puzzle.id.toUpperCase()}
                 </div>
-                <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "#eeeeff", lineHeight: 1.2 }}>
+                <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "var(--puzzle-title-size)", color: "#eeeeff", lineHeight: 1.2 }}>
                   {puzzle.title}
                 </h1>
               </div>
@@ -638,9 +811,9 @@ export default function Page() {
               <BattleField gs={puzzle.game_state} />
 
               {/* ── SCENARIO ── */}
-              <div style={{ background: "#06080f", border: "1px solid #151825", borderRadius: 11, padding: "16px 18px" }}>
+              <div style={{ background: "#06080f", border: "1px solid #151825", borderRadius: 11, padding: "var(--scenario-padding)" }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, letterSpacing: 3, color: "#4a7fff", marginBottom: 8 }}>SCENARIO</div>
-                <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, color: "#b8b8d0", lineHeight: 1.75 }}>
+                <p style={{ fontFamily: "'Syne', sans-serif", fontSize: "var(--scenario-text-size)", color: "#b8b8d0", lineHeight: 1.75 }}>
                   {puzzle.prompt}
                 </p>
               </div>
@@ -711,7 +884,7 @@ export default function Page() {
 
           {/* ── FOOTER ── */}
           <footer style={{
-            marginTop: 44, borderTop: "1px solid #0e1020", paddingTop: 16,
+            marginTop: "var(--footer-margin-top)", borderTop: "1px solid #0e1020", paddingTop: 16,
             display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8,
           }}>
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#151825", letterSpacing: 2 }}>VGC PUZZLE TRAINER · DOUBLES ONLY · REG G</span>
