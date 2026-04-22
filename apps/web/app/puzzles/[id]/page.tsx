@@ -1,4 +1,5 @@
 import { PuzzlePage } from "../../../components/PuzzlePage";
+import { getPuzzleById, getStaticPuzzleIds } from "@/lib/puzzles";
 
 interface PuzzlePageParams {
   params: Promise<{
@@ -12,13 +13,8 @@ interface PuzzlePageParams {
  */
 export default async function Page({ params }: PuzzlePageParams) {
   const { id } = await params;
-
-  // Fetch puzzle from API
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/puzzles/${id}`, {
-    next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
-  });
-
-  if (!response.ok) {
+  const puzzle = getPuzzleById(id);
+  if (!puzzle) {
     return (
       <main style={{ padding: "2rem", textAlign: "center" }}>
         <h1>Puzzle not found</h1>
@@ -26,8 +22,6 @@ export default async function Page({ params }: PuzzlePageParams) {
       </main>
     );
   }
-
-  const puzzle = await response.json();
 
   return <PuzzlePage puzzle={puzzle} />;
 }
@@ -37,9 +31,5 @@ export default async function Page({ params }: PuzzlePageParams) {
  * This enables ISR (Incremental Static Regeneration)
  */
 export async function generateStaticParams() {
-  // TODO: Fetch list of puzzle IDs from backend
-  return [
-    { id: "puzzle-001" },
-    { id: "random" },
-  ];
+  return getStaticPuzzleIds().map((id) => ({ id }));
 }

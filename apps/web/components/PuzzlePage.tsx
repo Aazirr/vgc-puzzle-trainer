@@ -70,8 +70,11 @@ export function PuzzlePage({ puzzle }: PuzzlePageProps) {
     if (attempt.selectedAnswer === null) return;
 
     const selectedIdx = parseInt(attempt.selectedAnswer, 10);
+    if (Number.isNaN(selectedIdx)) return;
+
     const allActions = [puzzle.correctAction, ...puzzle.wrongActions];
     const selectedAction = allActions[selectedIdx];
+    if (!selectedAction) return;
 
     const isCorrect = selectedIdx === 0;
     attempt.setIsCorrect(isCorrect);
