@@ -1,9 +1,9 @@
 import { PuzzlePage } from "../../../components/PuzzlePage";
 
 interface PuzzlePageParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 /**
