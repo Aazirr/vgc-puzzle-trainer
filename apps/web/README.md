@@ -116,10 +116,14 @@ apps/web/
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_AUTH_API_BASE=http://localhost:3001
 NEXT_PUBLIC_ENABLE_ANALYTICS=false
 NEXT_PUBLIC_CSP_HEADER=true
-NEXT_PUBLIC_AUTH_API_BASE=http://localhost:4000
 ```
+
+> The app uses backend auth when either `NEXT_PUBLIC_AUTH_API_BASE` or `NEXT_PUBLIC_API_URL` is configured. If neither is set, auth routes will report the backend as unconfigured.
+>
+> Before using `/register` or `/login`, start the API server on the configured backend port (for local development this is typically `http://localhost:3001`).
 
 ## Key Technologies
 

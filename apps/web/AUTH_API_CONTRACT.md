@@ -6,6 +6,7 @@ Postman collection: `apps/web/postman/auth-api.postman_collection.json`
 
 ## Base URL
 - `NEXT_PUBLIC_AUTH_API_BASE` (example: `https://api.example.com`)
+- `NEXT_PUBLIC_API_URL` may also be used as a fallback for auth requests.
 
 ## Endpoints
 - `POST /auth/register`
@@ -104,11 +105,6 @@ Recommended structure:
 - Frontend CSP automatically allows `NEXT_PUBLIC_AUTH_API_BASE` origin in `connect-src`.
 - If backend is on another origin, enable CORS for the web app origin.
 
-## Local Fallback Behavior
+## Backend-only Auth Behavior
 
-If `NEXT_PUBLIC_AUTH_API_BASE` is empty/unreachable, frontend uses local mock auth automatically:
-- Accounts in `localStorage`
-- Session in `sessionStorage`
-- Password hash via `SHA-256` in browser crypto
-
-This fallback is for development only.
+This frontend expects a backend auth service to be available. If neither `NEXT_PUBLIC_AUTH_API_BASE` nor `NEXT_PUBLIC_API_URL` is configured, auth requests will fail and the UI will show the backend as unconfigured.

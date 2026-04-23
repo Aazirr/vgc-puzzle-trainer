@@ -26,15 +26,24 @@ const ACCOUNTS_KEY = "vgc.frontend.accounts.v1";
 const SESSION_COOKIE = "vgc_session";
 const AUTH_PROVIDER_KEY = "vgc.frontend.auth_provider.v1";
 const AUTH_API_BASE = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+const API_URL_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
 function getAuthApiBase(): string {
   if (AUTH_API_BASE) return AUTH_API_BASE;
+  if (API_URL_BASE) return API_URL_BASE;
+
   if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") {
+    const host = window.location.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".local")
+    ) {
       return "http://localhost:3001";
     }
   }
+
   return "";
 }
 
@@ -194,6 +203,14 @@ export async function registerUser(input: AuthInput): Promise<{ ok: true; user: 
   if (!validateEmail(email)) return { ok: false, message: "Please provide a valid email." };
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
 
+  if (!getAuthApiBase()) {
+    return {
+      ok: false,
+      message:
+        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+    };
+  }
+
   const apiUser = await tryApiAuth("register", { email, password, displayName });
   if (!apiUser) {
     return { ok: false, message: "Backend auth service is unavailable or registration failed." };
@@ -209,6 +226,14 @@ export async function loginUser(input: AuthInput): Promise<{ ok: true; user: Aut
 
   if (!validateEmail(email)) return { ok: false, message: "Please provide a valid email." };
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
+
+  if (!getAuthApiBase()) {
+    return {
+      ok: false,
+      message:
+        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+    };
+  }
 
   const apiUser = await tryApiAuth("login", { email, password });
   if (!apiUser) {
