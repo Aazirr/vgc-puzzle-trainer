@@ -64,6 +64,11 @@ export default function LoginPage() {
     router.replace(nextPath);
   }, [busy, email, lockedUntil, password, router]);
 
+  const fillTestAccount = useCallback(() => {
+    setEmail("test@example.com");
+    setPassword("TestPassword123");
+  }, []);
+
   return (
     <main className={styles.authMain}>
       <section className={styles.authCard}>
@@ -106,6 +111,14 @@ export default function LoginPage() {
             {busy ? "SIGNING IN..." : "SIGN IN"}
           </button>
           {error && <p className={styles.error}>{error}</p>}
+          <button
+            className={styles.secondaryBtn}
+            type="button"
+            onClick={fillTestAccount}
+            disabled={busy}
+          >
+            Use Demo Account (test@example.com)
+          </button>
         </form>
 
         <div className={styles.footerRow}>

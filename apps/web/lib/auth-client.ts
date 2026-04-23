@@ -49,6 +49,30 @@ async function hashPassword(password: string): Promise<string> {
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Seed test account for development/testing
+async function seedTestAccount(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const accounts = readLocalAccounts();
+  const testEmail = "test@example.com";
+  if (accounts.some((a) => a.email === testEmail)) return; // Already exists
+
+  const passwordHash = await hashPassword("TestPassword123");
+  accounts.push({
+    email: testEmail,
+    displayName: "Test Trainer",
+    passwordHash,
+    createdAt: Date.now(),
+  });
+  writeLocalAccounts(accounts);
+}
+
+// Auto-seed test account on module load
+if (typeof window !== "undefined") {
+  seedTestAccount().catch(() => {
+    // Silently fail if seeding doesn't work
+  });
+}
+
 function readLocalAccounts(): LocalAccount[] {
   if (typeof window === "undefined") return [];
   const raw = window.localStorage.getItem(ACCOUNTS_KEY);
