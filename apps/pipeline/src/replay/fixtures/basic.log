@@ -1,0 +1,11 @@
+|turn|1
+|switch|p1a: Tornadus|Tornadus, L50|100/100
+|switch|p1b: Flutter Mane|Flutter Mane, L50|131/131
+|switch|p2a: Urshifu|Urshifu, L50|175/175
+|switch|p2b: Amoonguss|Amoonguss, L50|221/221
+|-weather|RainDance
+|-fieldstart|move: Electric Terrain
+|-sidestart|p1: Tailwind
+|-status|p2a: Urshifu|par
+|-damage|p2a: Urshifu|100/175
+|move|p1a: Tornadus|Tailwind|p1: Tornadus

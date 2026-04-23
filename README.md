@@ -154,9 +154,24 @@ Completed so far:
 - Standalone project repository initialized and pushed
 - Monorepo/workspace skeleton created for apps and shared packages
 - Baseline contributor and environment setup files added
+- Backend foundation started on branch `backend-phase-0`
+- `.env.example` and workspace TypeScript configuration are in place
+- Replay parser, migration runner, and smoke-test path are implemented
+- Showdown engine is now present as a git submodule
+- Showdown adapter wiring compiles across all workspaces
+- Root workspace build now passes
+
+Backend foundation includes:
+
+- Structured Express app bootstrap for the API service
+- Health route and puzzle contract route stubs
+- Shared puzzle contracts in `packages/domain`
+- Initial SQL migration for core tables
+- Database client helper, migration runner, and readiness route
+- Replay tokenizer, deterministic state reconstruction, and fixture tests in the pipeline workspace
+- Writable migration smoke-test path for disposable databases
 
 Current Phase 0 focus:
 
-- lock contracts and migration strategy
-- build replay parsing and deterministic snapshot extraction
-- establish test fixtures and quality gates
+- run the migration smoke test against a fresh database
+- keep expanding fixture coverage and quality gates

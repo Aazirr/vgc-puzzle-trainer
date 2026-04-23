@@ -202,10 +202,36 @@ Completed:
   - packages/domain, packages/showdown-adapter, packages/explanations, packages/config
   - shared root config (.gitignore, .editorconfig, tsconfig.base.json, .env.example, CONTRIBUTING.md)
 - Workspace package management initialized with npm workspaces and lockfile
+- Backend foundation started on branch `backend-phase-0`:
+	- structured Express app bootstrap
+	- health route and puzzle contract route stubs
+	- shared backend-facing puzzle contracts in `packages/domain`
+	- initial SQL migration for core schema
+	- database client helper, migration runner, and readiness route
 
 Next:
 
-- Add database migration tooling and first migration set
+- Add replay tokenizer and state reconstruction foundation
 - Implement replay tokenizer in pipeline
 - Implement deterministic battle state reconstruction and snapshot extractor
 - Add initial fixture-based deterministic tests
+
+### 2026-04-11 - Backend Follow-up
+
+Completed:
+
+- API can now boot with a readiness route that checks database connectivity
+- Workspace exposes a `db:migrate` command for the API package
+- Initial schema migration runner is wired into the app codebase
+- Replay parser now tokenizes Showdown-style logs, reconstructs deterministic snapshot state, and passes fixture tests
+- API now exposes a `db:smoke-test` command for disposable-database migration verification
+- Shared snapshot contract is versioned via `GAME_STATE_SNAPSHOT_SCHEMA_VERSION = "1.0.0"`
+- `.env.example` now contains the required environment variable keys
+- Workspace TypeScript configuration is in place across the monorepo
+- `apps/web` builds successfully and picked up the expected Next.js TypeScript include update
+- Showdown engine has been added as a git submodule
+- Showdown adapter wiring now compiles and the full root workspace build passes
+
+Still pending:
+
+- Run the migration smoke test against a fresh database

@@ -7,28 +7,40 @@ Use these checklists to track phase completion and reduce missed dependencies.
 ### Progress Update (2026-04-11)
 
 - Completed: repository scaffold and monorepo workspace structure
-- In progress: DB migrations, replay tokenizer, state rebuild, snapshot extractor, fixture tests
+- Completed: backend app skeleton, shared contracts, initial SQL migration, migration runner, readiness endpoint
+- Completed: replay tokenizer, state rebuild, snapshot extractor, fixture tests
+- Completed: migration up/down smoke-test path, frozen snapshot schema version in shared contracts
+- Completed: .env.example with required environment variable keys
+- Completed: TypeScript configuration across workspaces
+- Completed: Showdown engine added as git submodule
+- Completed: Showdown submodule imports correctly in pipeline and parser workspaces
+- Completed: TypeScript compiles with zero errors across all workspaces
+- Not yet verified: replay fixture determinism against live parser inputs
 
 ### Build Checklist
 
 - [x] Create app/package folder structure
-- [ ] Add DB migrations for core tables
-- [ ] Implement replay log tokenizer
-- [ ] Implement Showdown-based state rebuild
-- [ ] Implement snapshot extractor
-- [ ] Add fixture-based deterministic tests
-- [ ] Add .env.example with all required environment variable keys
-- [ ] Configure TypeScript (tsconfig.json) across workspaces
-- [ ] Add Showdown engine as git submodule
+- [x] Add DB migrations for core tables
+- [x] Implement replay log tokenizer
+- [x] Implement Showdown-based state rebuild
+- [x] Implement snapshot extractor
+- [x] Add fixture-based deterministic tests
+- [x] Add .env.example with all required environment variable keys
+- [x] Configure TypeScript (tsconfig.json) across workspaces
+- [x] Add Showdown engine as git submodule
 - [ ] Define and freeze shared TypeScript interfaces in contracts package
 
 ### Validation Checklist
 
-- [ ] Same replay fixture returns same snapshot output on repeated runs
+- [x] Same replay fixture returns same snapshot output on repeated runs
 - [ ] Migration up/down smoke test passes
-- [ ] Contracts for puzzle schema and snapshot format are frozen
-- [ ] Showdown submodule imports correctly in pipeline and parser workspaces
-- [ ] TypeScript compiles with zero errors across all workspaces
+- [x] Contracts for puzzle schema and snapshot format are frozen
+- [x] Showdown submodule imports correctly in pipeline and parser workspaces
+- [x] TypeScript compiles with zero errors across all workspaces
+
+### Status Note
+
+The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, the replay pipeline reconstructs deterministic snapshots from fixture logs, the migration smoke-test path now exists for disposable databases, and workspace TypeScript configuration is validated.
 
 ## Phase 1 - MVP Puzzle Loop
 
