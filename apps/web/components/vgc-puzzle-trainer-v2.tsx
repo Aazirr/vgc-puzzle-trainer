@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Security: sanitize all dynamic strings before render ─────────────────────
@@ -159,6 +159,7 @@ const Q_TYPE_LABEL = { speed_check:"Speed Check", ko_threshold:"KO Threshold", f
 const DIFF_LABEL    = ["","Beginner","Intermediate","Advanced"];
 const DIFF_COLOR    = ["","#4ade80","#facc15","#f87171"];
 
+// ─── PokéAPI hook — fetches type data & sprite fallback ───────────────────────
 // ─── HP bar ───────────────────────────────────────────────────────────────────
 function hpBar(pct) {
   if (pct > 50) return "#4ade80";
@@ -775,3 +776,4 @@ export default function App() {
     </>
   );
 }
+

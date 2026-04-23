@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Security: sanitize all dynamic strings before render ─────────────────────
@@ -157,35 +157,6 @@ const DIFF_LABEL    = ["","Beginner","Intermediate","Advanced"];
 const DIFF_COLOR    = ["","#4ade80","#facc15","#f87171"];
 
 // ─── PokéAPI hook — fetches type data & sprite fallback ───────────────────────
-function usePokemonData(name) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    if (!name) return;
-    const entry = POKEDEX[name];
-    if (!entry) return;
-    // Rate-limit: cache in module-level map
-    if (usePokemonData._cache[entry.slug]) {
-      setData(usePokemonData._cache[entry.slug]);
-      return;
-    }
-    fetch(`https://pokeapi.co/api/v2/pokemon/${entry.slug}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(json => {
-        if (!json) return;
-        const d = {
-          types: json.types.map(t => t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1)),
-          sprite: json.sprites?.other?.showdown?.front_default || json.sprites?.front_default,
-          art:    json.sprites?.other?.["official-artwork"]?.front_default,
-        };
-        usePokemonData._cache[entry.slug] = d;
-        setData(d);
-      })
-      .catch(() => null);
-  }, [name]);
-  return data;
-}
-usePokemonData._cache = {};
-
 // ─── HP bar ───────────────────────────────────────────────────────────────────
 function hpBar(pct) {
   if (pct > 50) return "#4ade80";
@@ -758,3 +729,4 @@ export default function App() {
     </>
   );
 }
+
