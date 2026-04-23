@@ -159,36 +159,6 @@ const Q_TYPE_LABEL = { speed_check:"Speed Check", ko_threshold:"KO Threshold", f
 const DIFF_LABEL    = ["","Beginner","Intermediate","Advanced"];
 const DIFF_COLOR    = ["","#4ade80","#facc15","#f87171"];
 
-// ─── PokéAPI hook — fetches type data & sprite fallback ───────────────────────
-function usePokemonData(name) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    if (!name) return;
-    const entry = POKEDEX[name];
-    if (!entry) return;
-    // Rate-limit: cache in module-level map
-    if (usePokemonData._cache[entry.slug]) {
-      setData(usePokemonData._cache[entry.slug]);
-      return;
-    }
-    fetch(`https://pokeapi.co/api/v2/pokemon/${entry.slug}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(json => {
-        if (!json) return;
-        const d = {
-          types: json.types.map(t => t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1)),
-          sprite: json.sprites?.other?.showdown?.front_default || json.sprites?.front_default,
-          art:    json.sprites?.other?.["official-artwork"]?.front_default,
-        };
-        usePokemonData._cache[entry.slug] = d;
-        setData(d);
-      })
-      .catch(() => null);
-  }, [name]);
-  return data;
-}
-usePokemonData._cache = {};
-
 // ─── HP bar ───────────────────────────────────────────────────────────────────
 function hpBar(pct) {
   if (pct > 50) return "#4ade80";
@@ -424,7 +394,50 @@ export function PuzzlePageV2({ puzzle }) {
   const [selected, setSelected] = useState(null);
   const [revealed, setRevealed] = useState(false);
 
-  const correct = revealed ? puzzle.actions.find(a => a.id === selected)?.correct : null;
+  // Support both old structure (game_state, actions) and new structure (gameState, correctAction, wrongActions)
+  const gameState = puzzle.gameState || puzzle.game_state;
+  const questionType = puzzle.questionType || puzzle.question_type;
+  const difficulty = puzzle.difficulty || 1;
+
+  // Transform new structure (p1/p2) to old structure (your_side/opp_side) if needed
+  const transformedGameState = gameState && gameState.p1 && gameState.p2 ? {
+    your_side: (gameState[puzzle.playerSide] || gameState.p1)?.active?.map(poke => ({
+      name: poke.species,
+      hp: poke.currentHp,
+      max_hp: poke.maxHp,
+      speed: poke.stats?.spe || 0,
+      status: poke.status,
+      item: poke.item,
+      types: [], // Would need to look up from a database
+      tera: false,
+    })) || [],
+    opp_side: (gameState[puzzle.playerSide === 'p1' ? 'p2' : 'p1'] || gameState.p2)?.active?.map(poke => ({
+      name: poke.species,
+      hp: poke.currentHp,
+      max_hp: poke.maxHp,
+      speed: poke.stats?.spe || 0,
+      status: poke.status,
+      item: poke.item,
+      types: [],
+      tera: false,
+    })) || [],
+    field: {
+      weather: gameState.weather || null,
+      terrain: gameState.terrain || null,
+      trick_room: false,
+    }
+  } : gameState;
+
+  const actions = puzzle.actions || [
+    { id: "correct", label: "Correct Action", correct: true },
+    ...(puzzle.wrongActions?.map((action, i) => ({
+      id: `wrong-${i}`,
+      label: `Alternative ${i + 1}`,
+      correct: false
+    })) || [])
+  ];
+
+  const correct = revealed ? actions.find(a => a.id === selected)?.correct : null;
 
   const submit = useCallback(() => {
     if (!selected || revealed) return;
@@ -465,7 +478,7 @@ export function PuzzlePageV2({ puzzle }) {
               <span style={{ color: "#e2e8f0" }}> Puzzle Trainer</span>
             </div>
             <div style={{ fontSize: 9, color: "#334155", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'IBM Plex Mono',monospace" }}>
-              {Q_TYPE_LABEL[puzzle.question_type] || "Puzzle"} · {DIFF_LABEL[puzzle.difficulty] || "Practice"}
+              {Q_TYPE_LABEL[questionType] || "Puzzle"} · {DIFF_LABEL[difficulty] || "Practice"}
             </div>
           </div>
           <div style={{
@@ -519,10 +532,10 @@ export function PuzzlePageV2({ puzzle }) {
               {san(puzzle.prompt)}
             </p>
 
-            <BattleField game_state={puzzle.game_state} />
+            <BattleField game_state={transformedGameState} />
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-              {puzzle.actions.map(a => (
+              {actions.map(a => (
                 <AnswerBtn key={a.id} action={a} selected={selected === a.id}
                   revealed={revealed} onClick={setSelected} />
               ))}
@@ -605,11 +618,12 @@ export default function App() {
   const [done,     setDone]     = useState(false);
 
   const puzzle  = PUZZLES[idx];
-  const correct = revealed ? puzzle.actions.find(a=>a.id===selected)?.correct : null;
+  const actions = puzzle.actions || [];
+  const correct = revealed ? actions.find(a=>a.id===selected)?.correct : null;
 
   const submit = useCallback(() => {
     if (!selected || revealed) return;
-    const ok = puzzle.actions.find(a=>a.id===selected)?.correct ?? false;
+    const ok = actions.find(a=>a.id===selected)?.correct ?? false;
     setRevealed(true);
     setResults(r=>[...r,ok]);
   }, [selected, revealed, puzzle]);
@@ -720,7 +734,7 @@ export default function App() {
 
               {/* Actions */}
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
-                {puzzle.actions.map(a=>(
+                {actions.map(a=>(
                   <AnswerBtn key={a.id} action={a} selected={selected===a.id}
                     revealed={revealed} onClick={setSelected}/>
                 ))}
