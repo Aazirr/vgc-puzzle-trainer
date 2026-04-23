@@ -27,6 +27,17 @@ const SESSION_COOKIE = "vgc_session";
 const AUTH_PROVIDER_KEY = "vgc.frontend.auth_provider.v1";
 const AUTH_API_BASE = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
 
+function getAuthApiBase(): string {
+  if (AUTH_API_BASE) return AUTH_API_BASE;
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://localhost:3001";
+    }
+  }
+  return "";
+}
+
 function normalizeDisplayName(input: string | undefined, email: string): string {
   const base = sanitizeInput(input ?? "").trim();
   if (base.length >= 2) return base.slice(0, 32);
@@ -47,30 +58,6 @@ async function hashPassword(password: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", encoded);
   const bytes = Array.from(new Uint8Array(digest));
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Seed test account for development/testing
-async function seedTestAccount(): Promise<void> {
-  if (typeof window === "undefined") return;
-  const accounts = readLocalAccounts();
-  const testEmail = "test@example.com";
-  if (accounts.some((a) => a.email === testEmail)) return; // Already exists
-
-  const passwordHash = await hashPassword("TestPassword123");
-  accounts.push({
-    email: testEmail,
-    displayName: "Test Trainer",
-    passwordHash,
-    createdAt: Date.now(),
-  });
-  writeLocalAccounts(accounts);
-}
-
-// Auto-seed test account on module load
-if (typeof window !== "undefined") {
-  seedTestAccount().catch(() => {
-    // Silently fail if seeding doesn't work
-  });
 }
 
 function readLocalAccounts(): LocalAccount[] {
@@ -143,9 +130,10 @@ async function tryApiAuth(
   path: "login" | "register",
   input: AuthInput
 ): Promise<AuthUser | null> {
-  if (!AUTH_API_BASE) return null;
+  const apiBase = getAuthApiBase();
+  if (!apiBase) return null;
   try {
-    const response = await fetch(`${AUTH_API_BASE}/auth/${path}`, {
+    const response = await fetch(`${apiBase}/auth/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -189,19 +177,20 @@ export function getAuthProviderStatus(): {
   backendConfigured: boolean;
   apiBase: string | null;
 } {
-  const backendConfigured = AUTH_API_BASE.length > 0;
+  const apiBase = getAuthApiBase();
+  const backendConfigured = apiBase.length > 0;
   const stored = readStoredProvider();
   if (stored) {
     return {
       provider: stored,
       backendConfigured,
-      apiBase: backendConfigured ? AUTH_API_BASE : null,
+      apiBase: backendConfigured ? apiBase : null,
     };
   }
   return {
     provider: backendConfigured ? "backend" : "local",
     backendConfigured,
-    apiBase: backendConfigured ? AUTH_API_BASE : null,
+    apiBase: backendConfigured ? apiBase : null,
   };
 }
 
