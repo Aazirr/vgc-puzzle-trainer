@@ -9,7 +9,7 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Completed: repository scaffold and monorepo workspace structure
 - Completed: backend app skeleton, shared contracts, initial SQL migration, migration runner, readiness endpoint
 - Completed: replay tokenizer, state rebuild, snapshot extractor, fixture tests
-- Completed: migration up/down smoke-test path, frozen snapshot schema version in shared contracts
+- Completed: fresh-database migration smoke-test command, frozen snapshot schema version in shared contracts
 - Completed: .env.example with required environment variable keys
 - Completed: TypeScript configuration across workspaces
 - Completed: Showdown engine added as git submodule
@@ -25,8 +25,22 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Verified: replay tokenizer/state rebuild/snapshot fixture tests pass
 - Verified: shared `domain`, `explanations`, and `showdown-adapter` packages build successfully
 - Confirmed: Phase 1 puzzle API routes exist as backend stubs and still return `501 not_implemented`
-- Still pending: migration smoke test against a fresh PostgreSQL database
+- Confirmed: migration runner tracks applied SQL files through `schema_migrations`
+- Confirmed: explanation renderer package exists as a scaffold only
+- Confirmed: Neon is the selected managed PostgreSQL service for `DATABASE_URL`
+- Confirmed: Railway API service has `DATABASE_URL` configured
+- Confirmed: Neon migrations were run manually
+- Still pending: down/rollback migration strategy, if needed before production
 - Still pending: replay fixture determinism against live parser inputs
+
+### Auth Bridge Update (2026-04-23)
+
+- Added backend password-auth bridge routes for the existing frontend login/register contract
+- Added `POST /auth/register` and `POST /auth/login`
+- Added `users.password_hash` migration for local email/password authentication
+- Added `CORS_ORIGIN` API environment variable for frontend-to-backend auth requests
+- Frontend must set `NEXT_PUBLIC_AUTH_API_BASE` to the deployed API origin
+- Still pending: production auth provider decision for Phase 3 account upgrade/session strategy
 
 ### Build Checklist
 
@@ -44,7 +58,7 @@ Use these checklists to track phase completion and reduce missed dependencies.
 ### Validation Checklist
 
 - [x] Same replay fixture returns same snapshot output on repeated runs
-- [ ] Migration up/down smoke test passes
+- [x] Fresh PostgreSQL migration smoke test passes
 - [x] Contracts for puzzle schema and snapshot format are frozen
 - [x] Showdown submodule imports correctly in pipeline and parser workspaces
 - [x] TypeScript compiles with zero errors across all workspaces
@@ -57,30 +71,34 @@ The backend is currently at a runnable foundation stage: API boots, database mig
 
 ### Current Backend Status (2026-04-23)
 
-- Route stubs exist for puzzle listing, puzzle fetch, and answer submission
-- These routes intentionally return `501 not_implemented` until the next backend slice
-- No seeded puzzle repository, answer hiding, answer evaluation, attempt recording, or filtering logic is implemented yet
+- Puzzle listing, random puzzle, puzzle fetch, and answer submission routes are database-backed
+- Puzzle fetch responses shuffle answer choices and omit correctness labels and explanations
+- Answer submission evaluates the selected action, returns explanation after submit, and records an attempt row
+- Difficulty and tag filtering exist on the puzzle list endpoint
+- Initial 10 approved hand-curated seed puzzles are available through SQL migration
+- No explanation templating logic is implemented yet
+- Account/guest attempt attribution is minimal and depends on caller-provided `userId` or `guestToken`
 
 ### Build Checklist
 
-- [ ] Implement GET puzzle endpoint without pre-answer leakage
-- [ ] Implement POST answer endpoint with correctness evaluation
+- [x] Implement GET puzzle endpoint without pre-answer leakage
+- [x] Implement POST answer endpoint with correctness evaluation
 - [ ] Build puzzle page (state display, question prompt, choices)
 - [ ] Build explanation reveal panel
-- [ ] Seed 10-20 approved hand-curated puzzles
+- [x] Seed 10-20 approved hand-curated puzzles
 - [ ] Record attempts for guest and account flows
 - [ ] Implement templated explanation renderer for speed_check and ko_threshold types
-- [ ] Shuffle answer choices server-side before sending to client
-- [ ] Add difficulty tag filtering to puzzle list endpoint
+- [x] Shuffle answer choices server-side before sending to client
+- [x] Add difficulty tag filtering to puzzle list endpoint
 
 ### Validation Checklist
 
-- [ ] No correct_action data in initial payload
-- [ ] Correctness and explanation are returned only after answer submit
+- [x] No correct_action field or correctness label in initial payload
+- [x] Correctness and explanation are returned only after answer submit
 - [ ] Guest flow works with token tracking
 - [ ] Authenticated attempt history persists
 - [ ] All 16 damage rolls confirmed fully above or below HP threshold on seeded KO puzzles
-- [ ] Answer choices arrive shuffled and without a correct label in the payload
+- [x] Answer choices arrive shuffled and without a correct label in the payload
 - [ ] Explanation template renders correctly for speed_check and ko_threshold
 
 ## Phase 2 - Simulation Supply
@@ -107,6 +125,11 @@ The backend is currently at a runnable foundation stage: API boots, database mig
 - [ ] No sim-generated puzzle enters the DB without a difficulty and at least one tag
 
 ## Phase 3 - Accounts and Progression
+
+### Current Backend Status (2026-04-23)
+
+- Minimal email/password auth endpoints exist to unblock the login/register frontend
+- No durable server-side sessions, refresh tokens, OAuth providers, guest upgrade path, or Auth.js adapter are implemented yet
 
 ### Build Checklist
 
@@ -172,6 +195,6 @@ The backend is currently at a runnable foundation stage: API boots, database mig
 - [ ] Documentation updated in companion docs
 - [ ] Non-affiliation legal disclaimer appears in site footer on every page
 - [ ] No official Pokemon sprites or artwork are used anywhere in the UI
-- [ ] DATABASE_URL points to a separate Railway PostgreSQL service, not app container
+- [x] DATABASE_URL points to Neon PostgreSQL, not app container
 - [ ] Prisma migrations run on deploy without force: true or synchronize: true
 - [ ] Domain name does not include the word Pokemon

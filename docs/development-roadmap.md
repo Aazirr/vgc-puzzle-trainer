@@ -152,7 +152,7 @@ These rules apply before shipping any public-facing release:
 
 - Non-affiliation legal disclaimer appears in the site footer on every page
 - No official Pokemon sprites or artwork are used in the UI
-- DATABASE_URL points to a separate Railway PostgreSQL service, not the app container
+- DATABASE_URL points to Neon PostgreSQL, not the app container
 - Prisma migrations run on deploy without force: true or synchronize: true
 - The domain name does not include the word Pokemon
 
