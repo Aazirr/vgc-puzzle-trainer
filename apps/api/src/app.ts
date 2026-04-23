@@ -11,10 +11,16 @@ export function createApiApp() {
   const env = loadApiEnv();
 
   app.use((req, res, next) => {
-    const corsOrigin = env.corsOrigin || (env.nodeEnv === "development" ? "*" : null);
-    if (corsOrigin) {
-      const allowOrigin = corsOrigin === "*" ? (req.headers.origin || "*") : corsOrigin;
-      res.header("Access-Control-Allow-Origin", allowOrigin);
+    const requestOrigin = req.header("Origin");
+    const allowAnyOrigin = env.corsOrigins.includes("*") || (env.corsOrigins.length === 0 && env.nodeEnv === "development");
+    const allowedOrigin = allowAnyOrigin
+      ? (requestOrigin ?? "*")
+      : requestOrigin && env.corsOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : null;
+
+    if (allowedOrigin) {
+      res.header("Access-Control-Allow-Origin", allowedOrigin);
       res.header("Vary", "Origin");
       res.header("Access-Control-Allow-Headers", "Content-Type");
       res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");

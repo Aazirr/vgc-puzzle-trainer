@@ -19,7 +19,15 @@ The API exposes minimal email/password auth endpoints to unblock the current fro
 Required runtime environment:
 
 - `DATABASE_URL`
-- `CORS_ORIGIN` when the frontend is served from another origin
+- `CORS_ORIGINS` when the frontend is served from another origin
+
+`CORS_ORIGINS` accepts a comma-separated allowlist. Keep the values as origins only, with no trailing slash:
+
+```env
+CORS_ORIGINS=https://your-production-web.vercel.app,https://your-preview-web.vercel.app,http://localhost:3000
+```
+
+`CORS_ORIGIN` is still accepted for a single-origin deployment.
 
 ## Puzzle API
 

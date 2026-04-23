@@ -19,18 +19,26 @@ Neon fits the current backend architecture:
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require
-CORS_ORIGIN=https://YOUR_FRONTEND_DOMAIN
+CORS_ORIGINS=https://YOUR_FRONTEND_DOMAIN,http://localhost:3000
 ```
 
 Use the direct Neon connection string for schema migrations and administrative jobs. Use the pooled connection string for runtime if the deployment target opens many concurrent connections.
 
-Set `CORS_ORIGIN` to the frontend origin that will call the API, for example `http://localhost:3000` in local development or the production Vercel URL after deploy.
+Set `CORS_ORIGINS` to the frontend origins that will call the API, for example `http://localhost:3000` in local development, the production Vercel URL after deploy, and any active Vercel preview URL your collaborator is testing. Keep each value as an origin only, with no trailing slash. `CORS_ORIGIN` is still supported for a single-origin deployment.
 
 The frontend login/register flow also needs:
 
 ```env
 NEXT_PUBLIC_AUTH_API_BASE=https://YOUR_API_DOMAIN
 ```
+
+To verify the deployed API is reachable from the frontend origin, replace the URLs and run:
+
+```powershell
+curl.exe -i -X OPTIONS "https://YOUR_API_DOMAIN/auth/login" -H "Origin: https://YOUR_FRONTEND_DOMAIN" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: Content-Type"
+```
+
+The response should include `Access-Control-Allow-Origin: https://YOUR_FRONTEND_DOMAIN`.
 
 ## Migration Commands
 
