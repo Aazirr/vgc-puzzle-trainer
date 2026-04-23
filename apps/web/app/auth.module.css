@@ -118,6 +118,31 @@
   opacity: 0.6;
 }
 
+.secondaryBtn {
+  margin-top: 8px;
+  border: 1px solid #3a5a8f;
+  background: transparent;
+  color: #7aa3d1;
+  border-radius: 10px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 10px 14px;
+  min-height: 40px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  border-color: #5a8dff;
+  color: #9bc3ff;
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .error {
   color: #f89a9a;
   font-size: 12px;
