@@ -1,11 +1,29 @@
 import express from "express";
+import { loadApiEnv } from "./config/env.js";
+import { registerAuthRoutes } from "./routes/auth.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerPuzzleRoutes } from "./routes/puzzles.js";
 import { registerReadyRoutes } from "./routes/ready.js";
 
 export function createApiApp() {
   const app = express();
+  const env = loadApiEnv();
 
+  app.use((req, res, next) => {
+    if (env.corsOrigin) {
+      res.header("Access-Control-Allow-Origin", env.corsOrigin);
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Headers", "Content-Type");
+      res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    }
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+
+    next();
+  });
   app.use(express.json());
   app.get("/", (_req, res) => {
     res.json({ service: "api", status: "running" });
@@ -13,6 +31,7 @@ export function createApiApp() {
 
   registerHealthRoutes(app);
   registerReadyRoutes(app);
+  registerAuthRoutes(app);
   registerPuzzleRoutes(app);
 
   return app;
