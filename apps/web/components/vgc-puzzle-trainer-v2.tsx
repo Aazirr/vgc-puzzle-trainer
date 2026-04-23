@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 // ─── Security: sanitize all dynamic strings before render ─────────────────────
 function san(str) {
@@ -412,6 +413,152 @@ function Explanation({ explanation, correct }) {
         </div>
       </div>
     </div>
+  );
+}
+
+export function PuzzlePageV2({ puzzle }) {
+  const router = useRouter();
+  const [selected, setSelected] = useState(null);
+  const [revealed, setRevealed] = useState(false);
+
+  const correct = revealed ? puzzle.actions.find(a => a.id === selected)?.correct : null;
+
+  const submit = useCallback(() => {
+    if (!selected || revealed) return;
+    setRevealed(true);
+  }, [selected, revealed]);
+
+  const retry = useCallback(() => {
+    setSelected(null);
+    setRevealed(false);
+  }, []);
+
+  const goRandom = useCallback(() => {
+    router.push("/puzzles/random");
+  }, [router]);
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{background:#060b12;color:#e2e8f0;font-family:'Syne',system-ui,sans-serif}
+        @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.8}}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0f172a}
+        ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+      `}</style>
+
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <header style={{
+          width: "100%", maxWidth: 780,
+          padding: "14px 20px",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          borderBottom: "1px solid #1e293b",
+        }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em" }}>
+              <span style={{ color: "#22d3ee" }}>VGC</span>
+              <span style={{ color: "#e2e8f0" }}> Puzzle Trainer</span>
+            </div>
+            <div style={{ fontSize: 9, color: "#334155", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'IBM Plex Mono',monospace" }}>
+              {Q_TYPE_LABEL[puzzle.question_type] || "Puzzle"} · {DIFF_LABEL[puzzle.difficulty] || "Practice"}
+            </div>
+          </div>
+          <div style={{
+            background: "#0f172a", border: "1px solid #1e293b",
+            borderRadius: 6, padding: "5px 12px",
+            fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: "#94a3b8",
+          }}>
+            {puzzle.id.toUpperCase()}
+          </div>
+        </header>
+
+        <main style={{ width: "100%", maxWidth: 780, padding: "22px 20px 64px", flex: 1 }}>
+          <div style={{ animation: "slideUp 0.3s ease" }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: "#334155", letterSpacing: "0.1em" }}>
+                  {san(puzzle.title)}
+                </span>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: "#a78bfa" }}>
+                  {Math.round((revealed ? 1 : 0) * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              <span style={{
+                background: "#0ea5e920", color: "#22d3ee", border: "1px solid #22d3ee33",
+                borderRadius: 4, padding: "2px 9px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+                fontFamily: "'IBM Plex Mono',monospace",
+              }}>{Q_TYPE_LABEL[puzzle.question_type] || "Puzzle"}</span>
+              <span style={{
+                background: DIFF_COLOR[puzzle.difficulty] + "20",
+                color: DIFF_COLOR[puzzle.difficulty] || "#94a3b8",
+                border: `1px solid ${DIFF_COLOR[puzzle.difficulty] || "#94a3b8"}33`,
+                borderRadius: 4, padding: "2px 9px", fontSize: 10,
+                fontFamily: "'IBM Plex Mono',monospace",
+              }}>{DIFF_LABEL[puzzle.difficulty] || "Practice"}</span>
+              {(puzzle.tags || []).map(t => (
+                <span key={t} style={{
+                  background: "#1e293b", color: "#475569",
+                  borderRadius: 4, padding: "2px 8px", fontSize: 9,
+                  fontFamily: "'IBM Plex Mono',monospace",
+                }}>#{san(t)}</span>
+              ))}
+            </div>
+
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9", marginBottom: 8, lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              {san(puzzle.title)}
+            </h1>
+            <p style={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.75, marginBottom: 20 }}>
+              {san(puzzle.prompt)}
+            </p>
+
+            <BattleField game_state={puzzle.game_state} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {puzzle.actions.map(a => (
+                <AnswerBtn key={a.id} action={a} selected={selected === a.id}
+                  revealed={revealed} onClick={setSelected} />
+              ))}
+            </div>
+
+            {!revealed ? (
+              <button onClick={submit} disabled={!selected} style={{
+                width: "100%", padding: "13px", borderRadius: 8, border: "none",
+                background: selected ? "#1d4ed8" : "#1e293b",
+                color: selected ? "#dbeafe" : "#475569",
+                fontSize: 14, fontWeight: 800, cursor: selected ? "pointer" : "not-allowed",
+                letterSpacing: "0.05em", transition: "all 0.15s",
+              }}>Submit Answer</button>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <button onClick={goRandom} style={{
+                  width: "100%", padding: "13px", borderRadius: 8, border: "none",
+                  background: "#7c3aed", color: "#ede9fe", fontSize: 14, fontWeight: 800,
+                  cursor: "pointer", letterSpacing: "0.05em",
+                }}>Next Random Puzzle →</button>
+                <button onClick={retry} style={{
+                  width: "100%", padding: "13px", borderRadius: 8, border: "1px solid #334155",
+                  background: "transparent", color: "#cbd5e1", fontSize: 14, fontWeight: 800,
+                  cursor: "pointer", letterSpacing: "0.05em",
+                }}>Try Again</button>
+              </div>
+            )}
+
+            {revealed && correct !== null && <Explanation explanation={puzzle.explanation} correct={correct} />}
+          </div>
+        </main>
+
+        <footer style={{ borderTop: "1px solid #1e293b", width: "100%", padding: "10px 20px", textAlign: "center" }}>
+          <span style={{ fontSize: 10, color: "#1e293b", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.08em" }}>
+            SPRITES © POKÉAPI · SHOWDOWN ENGINE © SMOGON · PUZZLES HAVE PROVABLY CORRECT ANSWERS ONLY
+          </span>
+        </footer>
+      </div>
+    </>
   );
 }
 
