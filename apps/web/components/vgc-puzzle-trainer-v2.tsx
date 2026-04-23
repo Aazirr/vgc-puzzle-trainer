@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Security: sanitize all dynamic strings before render ─────────────────────
-function san(str: unknown): string {
+function san(str: string): string {
   if (typeof str !== "string") return "";
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
             .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
