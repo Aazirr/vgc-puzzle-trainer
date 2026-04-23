@@ -97,6 +97,9 @@ apps/web/
 | Route | Purpose |
 |-------|---------|
 | `/` | Home page with feature overview |
+| `/login` | Login route |
+| `/register` | Registration route |
+| `/account` | Signed-in account page |
 | `/puzzles/[id]` | Puzzle detail page |
 | `/puzzles/random` | Redirect to random puzzle |
 | `/api/puzzles/:id` | Fetch puzzle (with caching) |
@@ -108,7 +111,6 @@ apps/web/
 - `/submit` - Community puzzle submission
 - `/dashboard` - User progress tracking
 - `/moderate` - Moderation queue
-- `/login` - Authentication
 
 ## Environment Variables
 
@@ -116,6 +118,7 @@ apps/web/
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_ENABLE_ANALYTICS=false
 NEXT_PUBLIC_CSP_HEADER=true
+NEXT_PUBLIC_AUTH_API_BASE=http://localhost:4000
 ```
 
 ## Key Technologies
@@ -312,6 +315,8 @@ npm run lint
 ## For More Information
 
 See [FRONTEND_GUIDE.md](./FRONTEND_GUIDE.md) for detailed implementation documentation.
+See [AUTH_API_CONTRACT.md](./AUTH_API_CONTRACT.md) for backend auth request/response contract.
+Postman collection: `apps/web/postman/auth-api.postman_collection.json`.
 
 ## Contributing
 

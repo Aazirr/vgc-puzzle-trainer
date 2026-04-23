@@ -24,13 +24,24 @@ export function validateEmail(email: string): boolean {
  * Note: This should ideally be set on the server via headers
  */
 export function getCSPMeta(): Record<string, string> {
+  const authApiBase = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+  let authApiOrigin = "";
+  if (authApiBase) {
+    try {
+      authApiOrigin = new URL(authApiBase).origin;
+    } catch {
+      authApiOrigin = "";
+    }
+  }
+
   return {
     "default-src": "'self'",
     "script-src": "'self' 'unsafe-inline'", // Next.js requires unsafe-inline
     "style-src": "'self' 'unsafe-inline'",
     "img-src": "'self' data: https:",
     "font-src": "'self' data:",
-    "connect-src": "'self' https://pokeapi.co https://raw.githubusercontent.com",
+    "media-src": "'self' https://raw.githubusercontent.com https://pokeapi.co",
+    "connect-src": `'self' https://pokeapi.co https://raw.githubusercontent.com ${authApiOrigin}`.trim(),
     "frame-ancestors": "'none'",
     "base-uri": "'self'",
     "form-action": "'self'",

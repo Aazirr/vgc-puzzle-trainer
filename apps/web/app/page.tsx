@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, memo } from "react";
+import { useState, useCallback, useEffect, useRef, memo, type FormEvent } from "react";
+import { RateLimiter } from "../lib/security";
+import { clearSessionUser, getAuthProviderStatus, getSessionUser, loginUser, type AuthProvider } from "../lib/auth-client";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface PokemonSnapshot {
@@ -51,6 +53,12 @@ const TYPE_COLORS: Record<string, string> = {
   Flying: "#8EA8DD", Bug: "#A4C43E", Rock: "#B8A86C", Ghost: "#6A5B9E",
   Steel: "#9BAAB8", Normal: "#A8A07C",
 };
+const TYPE_CLICK_TONES: Record<string, number> = {
+  Fire: 220, Water: 196, Grass: 262, Electric: 330, Psychic: 294, Ice: 247, Dragon: 175,
+  Dark: 156, Fairy: 349, Fighting: 208, Poison: 185, Ground: 147, Flying: 277, Bug: 233,
+  Rock: 165, Ghost: 139, Steel: 262, Normal: 220,
+};
+let sharedAudioContext: AudioContext | null = null;
 
 const QUESTION_LABELS: Record<string, { label: string; color: string }> = {
   speed_check:       { label: "SPEED CHECK",        color: "#7db4ff" },
@@ -70,7 +78,17 @@ const sanitize = (s: string) =>
   String(s).replace(/[<>&"'`]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;","`":"&#96;"}[c] ?? c));
 
 const POKEAPI_ORIGIN = "https://pokeapi.co";
-const pokeCache = new Map<string, string | null>();
+const LOGIN_LOCK_MS = 30_000;
+interface PokemonMedia {
+  sprite: string | null;
+  cry: string | null;
+}
+interface LocalSessionUser {
+  email: string;
+  displayName: string;
+  loggedAt: number;
+}
+const mediaCache = new Map<string, PokemonMedia>();
 const POKEAPI_NAME_OVERRIDES: Record<string, string[]> = {
   "flutter mane": ["flutter-mane"],
   "iron hands": ["iron-hands"],
@@ -131,6 +149,55 @@ function toPokeSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+function sanitizeMediaUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== "string" || rawUrl.trim().length === 0) return null;
+  try {
+    const url = new URL(rawUrl);
+    const allowedHosts = new Set(["raw.githubusercontent.com", "pokeapi.co"]);
+    if (url.protocol !== "https:" || !allowedHosts.has(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function playPokemonFallbackTone(types: string[]): void {
+  if (typeof window === "undefined" || !window.AudioContext) return;
+  try {
+    if (!sharedAudioContext) sharedAudioContext = new window.AudioContext();
+    const ctx = sharedAudioContext;
+    const baseType = types[0] ?? "Normal";
+    const accentType = types[1] ?? baseType;
+    const now = ctx.currentTime;
+
+    const oscA = ctx.createOscillator();
+    const gainA = ctx.createGain();
+    oscA.type = "triangle";
+    oscA.frequency.value = TYPE_CLICK_TONES[baseType] ?? 220;
+    gainA.gain.setValueAtTime(0.0001, now);
+    gainA.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gainA.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    oscA.connect(gainA);
+    gainA.connect(ctx.destination);
+    oscA.start(now);
+    oscA.stop(now + 0.16);
+
+    const oscB = ctx.createOscillator();
+    const gainB = ctx.createGain();
+    oscB.type = "sine";
+    oscB.frequency.value = (TYPE_CLICK_TONES[accentType] ?? 220) * 1.5;
+    gainB.gain.setValueAtTime(0.0001, now + 0.02);
+    gainB.gain.exponentialRampToValueAtTime(0.045, now + 0.05);
+    gainB.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    oscB.connect(gainB);
+    gainB.connect(ctx.destination);
+    oscB.start(now + 0.02);
+    oscB.stop(now + 0.18);
+  } catch {
+    // Ignore browser audio failures and keep interaction smooth.
+  }
+}
+
 function getPokeCandidates(name: string): string[] {
   const raw = name.toLowerCase().trim();
   const slug = toPokeSlug(name);
@@ -163,7 +230,7 @@ function getPokeCandidates(name: string): string[] {
   return Array.from(candidates);
 }
 
-async function fetchSpriteForCandidate(candidate: string): Promise<string | null> {
+async function fetchMediaForCandidate(candidate: string): Promise<PokemonMedia | null> {
   const url = new URL(`/api/v2/pokemon/${encodeURIComponent(candidate)}`, POKEAPI_ORIGIN);
   if (url.origin !== POKEAPI_ORIGIN) return null;
 
@@ -171,32 +238,42 @@ async function fetchSpriteForCandidate(candidate: string): Promise<string | null
   if (!res.ok) return null;
 
   const data = await res.json();
-  return (
+  const sprite = sanitizeMediaUrl(
     data?.sprites?.other?.["official-artwork"]?.front_default ??
     data?.sprites?.front_default ??
     null
   );
+  const cry = sanitizeMediaUrl(
+    data?.cries?.latest ??
+    data?.cries?.legacy ??
+    null
+  );
+
+  if (!sprite && !cry) return null;
+  return { sprite, cry };
 }
 
-async function fetchSprite(name: string): Promise<string | null> {
+async function fetchPokemonMedia(name: string): Promise<PokemonMedia> {
   const key = toPokeSlug(name);
-  if (pokeCache.has(key)) return pokeCache.get(key) ?? null;
+  if (mediaCache.has(key)) return mediaCache.get(key) ?? { sprite: null, cry: null };
 
   const candidates = getPokeCandidates(name);
   try {
     for (const candidate of candidates) {
-      const sprite = await fetchSpriteForCandidate(candidate);
-      if (sprite) {
-        pokeCache.set(key, sprite);
-        pokeCache.set(candidate, sprite);
-        return sprite;
+      const media = await fetchMediaForCandidate(candidate);
+      if (media) {
+        mediaCache.set(key, media);
+        mediaCache.set(candidate, media);
+        return media;
       }
     }
-    pokeCache.set(key, null);
-    return null;
+    const fallback = { sprite: null, cry: null };
+    mediaCache.set(key, fallback);
+    return fallback;
   } catch {
-    pokeCache.set(key, null);
-    return null;
+    const fallback = { sprite: null, cry: null };
+    mediaCache.set(key, fallback);
+    return fallback;
   }
 }
 
@@ -345,26 +422,79 @@ function HpBar({ hp, maxHp }: { hp: number; maxHp: number }) {
 
 // ─── POKEMON CARD ─────────────────────────────────────────────────────────────
 const PokemonCard = memo(function PokemonCard({
-  mon, side,
-}: { mon: PokemonSnapshot; side: "player" | "opp" }) {
-  const [sprite, setSprite] = useState<string | null>(null);
+  mon, side, soundEnabled,
+}: { mon: PokemonSnapshot; side: "player" | "opp"; soundEnabled: boolean }) {
+  const [media, setMedia] = useState<PokemonMedia>({ sprite: null, cry: null });
+  const [clicked, setClicked] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetchSprite(mon.name).then((s) => { if (alive) setSprite(s); });
+    fetchPokemonMedia(mon.name).then((m) => { if (alive) setMedia(m); });
     return () => { alive = false; };
   }, [mon.name]);
+
+  const playCry = useCallback(() => {
+    if (!soundEnabled) return;
+    if (!media.cry) {
+      playPokemonFallbackTone(mon.types);
+      return;
+    }
+    try {
+      if (!audioRef.current || audioRef.current.src !== media.cry) {
+        audioRef.current = new Audio(media.cry);
+        audioRef.current.preload = "none";
+        audioRef.current.volume = 0.35;
+      }
+      const audio = audioRef.current;
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        void playPromise.catch(() => playPokemonFallbackTone(mon.types));
+      }
+    } catch {
+      playPokemonFallbackTone(mon.types);
+    }
+  }, [media.cry, mon.types, soundEnabled]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const triggerCardClick = useCallback(() => {
+    setClicked(true);
+    window.setTimeout(() => setClicked(false), 180);
+    playCry();
+  }, [playCry]);
 
   const primary = mon.types[0] ?? "Normal";
   const accent = TYPE_COLORS[primary] ?? "#4a4a5a";
   const hpPct = Math.round((mon.hp / mon.max_hp) * 100);
 
   return (
-    <div style={{
+    <div
+      className={`pokemon-card${clicked ? " pokemon-card-clicked" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Play ${sanitize(mon.name)} cry`}
+      onClick={triggerCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerCardClick();
+        }
+      }}
+      style={{
       display: "flex", flexDirection: "column", alignItems: "center",
       background: `linear-gradient(155deg, #0b0d16 0%, ${accent}14 100%)`,
       border: `1px solid ${accent}28`, borderRadius: 12,
       padding: "var(--card-padding)", minWidth: "var(--card-min-width)", flex: 1, position: "relative",
+      cursor: "pointer",
     }}>
       {/* side label */}
       <span style={{
@@ -380,8 +510,8 @@ const PokemonCard = memo(function PokemonCard({
 
       {/* sprite */}
       <div style={{ width: "var(--card-sprite)", height: "var(--card-sprite)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
-        {sprite
-          ? <img src={sprite} alt={sanitize(mon.name)} loading="lazy" decoding="async"
+        {media.sprite
+          ? <img src={media.sprite} alt={sanitize(mon.name)} loading="lazy" decoding="async"
               style={{ width: "100%", height: "100%", objectFit: "contain", filter: side === "opp" ? "brightness(0.82) hue-rotate(170deg)" : "none" }} />
           : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#1a1a2a", animation: "pulse 1.5s infinite" }} />
         }
@@ -459,7 +589,7 @@ function FieldBanner({ field }: { field: GameState["field"] }) {
 }
 
 // ─── BATTLE FIELD ─────────────────────────────────────────────────────────────
-function BattleField({ gs }: { gs: GameState }) {
+function BattleField({ gs, soundEnabled }: { gs: GameState; soundEnabled: boolean }) {
   return (
     <div style={{
       background: "linear-gradient(180deg, #05070f 0%, #0b0d18 50%, #05070f 100%)",
@@ -479,7 +609,7 @@ function BattleField({ gs }: { gs: GameState }) {
       }}>
         {/* player side */}
         <div style={{ display: "flex", gap: "var(--battle-side-gap)", flex: 1, width: "100%" }}>
-          {gs.your_side.map((m) => <PokemonCard key={m.name} mon={m} side="player" />)}
+          {gs.your_side.map((m) => <PokemonCard key={m.name} mon={m} side="player" soundEnabled={soundEnabled} />)}
         </div>
 
         {/* VS */}
@@ -487,7 +617,7 @@ function BattleField({ gs }: { gs: GameState }) {
 
         {/* opp side */}
         <div style={{ display: "flex", gap: "var(--battle-side-gap)", flex: 1, justifyContent: "flex-end", width: "100%" }}>
-          {gs.opp_side.map((m) => <PokemonCard key={m.name} mon={m} side="opp" />)}
+          {gs.opp_side.map((m) => <PokemonCard key={m.name} mon={m} side="opp" soundEnabled={soundEnabled} />)}
         </div>
       </div>
 
@@ -622,6 +752,115 @@ function ScoreScreen({ score, total, onRestart }: { score: number; total: number
   );
 }
 
+function LoginPanel({
+  authUser,
+  loginEmail,
+  loginPassword,
+  loginBusy,
+  loginError,
+  lockedUntil,
+  authProvider,
+  backendConfigured,
+  soundEnabled,
+  onSoundToggle,
+  onEmailChange,
+  onPasswordChange,
+  onSubmit,
+  onLogout,
+}: {
+  authUser: LocalSessionUser | null;
+  loginEmail: string;
+  loginPassword: string;
+  loginBusy: boolean;
+  loginError: string | null;
+  lockedUntil: number;
+  authProvider: AuthProvider;
+  backendConfigured: boolean;
+  soundEnabled: boolean;
+  onSoundToggle: () => void;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  onLogout: () => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (lockedUntil <= Date.now()) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [lockedUntil]);
+  const lockedSeconds = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
+  const lockActive = lockedSeconds > 0;
+  const authModeText = backendConfigured
+    ? (authProvider === "backend" ? "AUTH: BACKEND" : "AUTH: LOCAL FALLBACK")
+    : "AUTH: LOCAL ONLY";
+
+  return (
+    <section className="login-panel" aria-label="Frontend login tools">
+      <div className="login-title-row">
+        <div>
+          <div className="login-eyebrow">SECURE FRONTEND LOGIN</div>
+          <h2 className="login-title">Session Access</h2>
+          <p className="login-note">Prototype mode only: password stays in-memory and is never persisted.</p>
+          <span className={`auth-mode-badge ${authProvider === "backend" ? "auth-mode-backend" : "auth-mode-local"}`}>
+            {authModeText}
+          </span>
+        </div>
+        <button type="button" className="sound-toggle-btn" onClick={onSoundToggle}>
+          {soundEnabled ? "SOUND ON" : "SOUND OFF"}
+        </button>
+      </div>
+
+      {authUser ? (
+        <div className="login-success-row">
+          <p className="login-note">
+            Logged in as <strong>{authUser.displayName}</strong> ({authUser.email})
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a href="/account" className="panel-link-btn">ACCOUNT</a>
+            <button type="button" className="login-submit-btn" onClick={onLogout}>LOG OUT</button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="login-form" autoComplete="off">
+          <label className="login-field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={loginEmail}
+              onChange={(e) => onEmailChange(e.currentTarget.value)}
+              maxLength={120}
+              required
+              inputMode="email"
+              autoComplete="username"
+              className="login-input"
+              placeholder="trainer@vgc.local"
+            />
+          </label>
+          <label className="login-field">
+            <span>Password</span>
+            <input
+              type="password"
+              value={loginPassword}
+              onChange={(e) => onPasswordChange(e.currentTarget.value)}
+              maxLength={120}
+              minLength={8}
+              required
+              autoComplete="current-password"
+              className="login-input"
+              placeholder="At least 8 characters"
+            />
+          </label>
+          <button type="submit" className="login-submit-btn" disabled={loginBusy || lockActive}>
+            {loginBusy ? "SIGNING IN..." : lockActive ? `WAIT ${lockedSeconds}s` : "SIGN IN"}
+          </button>
+          {loginError && <p className="login-error">{loginError}</p>}
+        </form>
+      )}
+    </section>
+  );
+}
+
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function Page() {
   const [idx, setIdx]           = useState(0);
@@ -629,6 +868,56 @@ export default function Page() {
   const [revealed, setRevealed] = useState(false);
   const [results, setResults]   = useState<boolean[]>([]);
   const [done, setDone]         = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [authProvider, setAuthProvider] = useState<AuthProvider>("local");
+  const [backendConfigured, setBackendConfigured] = useState(false);
+  const [authUser, setAuthUser] = useState<LocalSessionUser | null>(null);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const loginLimiterRef = useRef(new RateLimiter(5, 60_000));
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const refreshAuthProvider = useCallback(() => {
+    const status = getAuthProviderStatus();
+    setAuthProvider(status.provider);
+    setBackendConfigured(status.backendConfigured);
+  }, []);
+
+  useEffect(() => {
+    const parsed = getSessionUser();
+    if (!parsed) return;
+    setAuthUser({
+      email: parsed.email,
+      displayName: parsed.displayName,
+      loggedAt: parsed.loggedAt,
+    });
+  }, []);
+
+  useEffect(() => {
+    refreshAuthProvider();
+  }, [refreshAuthProvider]);
+
+  useEffect(() => {
+    const closeMenu = (event: MouseEvent) => {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowProfileMenu(false);
+    };
+    document.addEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", closeWithEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", closeWithEscape);
+    };
+  }, []);
 
   const puzzle = PUZZLES[idx];
   if (!puzzle) {
@@ -656,6 +945,51 @@ export default function Page() {
   const restart = useCallback(() => {
     setIdx(0); setSelected(null); setRevealed(false); setResults([]); setDone(false);
   }, []);
+
+  const onLoginSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (loginBusy) return;
+
+    const now = Date.now();
+    if (lockedUntil > now) {
+      setLoginError(`Too many attempts. Try again in ${Math.ceil((lockedUntil - now) / 1000)} seconds.`);
+      return;
+    }
+
+    if (!loginLimiterRef.current.isAllowed("frontend-login")) {
+      setLockedUntil(now + LOGIN_LOCK_MS);
+      setLoginError("Too many login attempts. Please wait before trying again.");
+      return;
+    }
+
+    setLoginBusy(true);
+    setLoginError(null);
+    const result = await loginUser({ email: loginEmail, password: loginPassword });
+    setLoginBusy(false);
+    if (!result.ok) {
+      setLoginError(result.message);
+      return;
+    }
+    setAuthUser({
+      email: result.user.email,
+      displayName: result.user.displayName,
+      loggedAt: result.user.loggedAt,
+    });
+    setLoginPassword("");
+    refreshAuthProvider();
+  }, [lockedUntil, loginBusy, loginEmail, loginPassword, refreshAuthProvider]);
+
+  const onLogout = useCallback(() => {
+    setShowProfileMenu(false);
+    setAuthUser(null);
+    setLoginPassword("");
+    setLoginError(null);
+    clearSessionUser();
+    refreshAuthProvider();
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
+    }
+  }, [refreshAuthProvider]);
 
   const streak = (() => {
     let s = 0;
@@ -690,12 +1024,212 @@ export default function Page() {
         html { scroll-behavior: smooth; }
         body { background: #04060e; color: #e0e0f0; font-family: 'Syne', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
         @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.9} }
+        @keyframes pokeClick { 0%{transform:scale(1)} 40%{transform:scale(0.95)} 100%{transform:scale(1.02)} }
+        @keyframes profileDrop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         :focus-visible { outline: 2px solid #4a7fff; outline-offset: 2px; }
         ::selection { background: #4a7fff30; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #04060e; }
         ::-webkit-scrollbar-thumb { background: #151825; border-radius: 3px; }
         .battle-main { flex-direction: row; align-items: center; }
+        .pokemon-card { transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+        .pokemon-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px #00000040; }
+        .pokemon-card-clicked { animation: pokeClick 0.18s ease-out; }
+        .login-panel {
+          margin-bottom: 20px;
+          padding: 16px;
+          border-radius: 12px;
+          border: 1px solid #151a2d;
+          background: linear-gradient(160deg, #070b17 0%, #05070f 100%);
+        }
+        .login-title-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .login-eyebrow {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 8px;
+          letter-spacing: 2px;
+          color: #4a7fff;
+          margin-bottom: 4px;
+        }
+        .login-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 20px;
+          line-height: 1.2;
+          color: #e9ebff;
+        }
+        .login-note {
+          margin-top: 4px;
+          font-family: 'Syne', sans-serif;
+          font-size: 13px;
+          color: #8e93b6;
+        }
+        .auth-mode-badge {
+          margin-top: 8px;
+          display: inline-flex;
+          align-items: center;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 1px;
+          border: 1px solid transparent;
+        }
+        .auth-mode-backend {
+          color: #82d7a8;
+          background: #0c2218;
+          border-color: #246a46;
+        }
+        .auth-mode-local {
+          color: #f8c980;
+          background: #231a0d;
+          border-color: #6d4b1b;
+        }
+        .sound-toggle-btn {
+          border: 1px solid #4a7fff66;
+          background: #0a1227;
+          color: #7db4ff;
+          border-radius: 8px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          padding: 10px 14px;
+          cursor: pointer;
+        }
+        .login-form {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: 10px;
+          align-items: end;
+        }
+        .login-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          color: #7a83b6;
+          letter-spacing: 1px;
+        }
+        .login-input {
+          border: 1px solid #212744;
+          background: #080c18;
+          color: #dce0f7;
+          border-radius: 8px;
+          padding: 10px 12px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 12px;
+        }
+        .login-submit-btn {
+          border: 1px solid #4a7fff66;
+          background: #0b1630;
+          color: #8ec0ff;
+          border-radius: 8px;
+          padding: 11px 14px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          cursor: pointer;
+          min-height: 40px;
+        }
+        .login-submit-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+        .login-error {
+          grid-column: 1 / -1;
+          color: #f08787;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+        }
+        .login-success-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .panel-link-btn {
+          border: 1px solid #31467f;
+          background: #0a1228;
+          color: #90baff;
+          border-radius: 8px;
+          padding: 11px 14px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 2px;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+        }
+        .profile-menu-wrap {
+          position: relative;
+        }
+        .profile-pill {
+          border: 1px solid #2b3f74;
+          background: #0a1328;
+          color: #9cc2ff;
+          border-radius: 999px;
+          min-height: 34px;
+          padding: 7px 12px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+        }
+        .profile-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #2dce7a;
+          box-shadow: 0 0 0 4px #2dce7a22;
+          flex-shrink: 0;
+        }
+        .profile-menu {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 8px);
+          min-width: 208px;
+          border: 1px solid #1f2a50;
+          border-radius: 10px;
+          background: linear-gradient(170deg, #0b1223 0%, #070b16 100%);
+          box-shadow: 0 18px 30px #00000054;
+          z-index: 30;
+          overflow: hidden;
+          animation: profileDrop 160ms ease-out;
+        }
+        .profile-menu-item {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 12px;
+          border: 0;
+          border-bottom: 1px solid #171f3c;
+          background: transparent;
+          color: #adc7f5;
+          text-decoration: none;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 1px;
+          cursor: pointer;
+          text-align: left;
+        }
+        .profile-menu-item:hover {
+          background: #0d1834;
+        }
+        .profile-menu-item:last-child {
+          border-bottom: 0;
+        }
         @media (max-width: 860px) {
           :root {
             --app-max-width: 100%;
@@ -717,25 +1251,36 @@ export default function Page() {
             --footer-margin-top: 28px;
           }
           .battle-main { flex-direction: column; align-items: stretch; }
+          .login-title { font-size: 17px; }
+          .login-panel { padding: 12px; margin-bottom: 16px; }
+          .login-form { grid-template-columns: 1fr; }
+          .login-submit-btn { width: 100%; }
         }
         @media (min-width: 1280px) {
           :root {
-            --app-max-width: 1160px;
+            --app-max-width: 1320px;
             --app-padding-y: 42px;
-            --app-padding-x: 24px;
+            --app-padding-x: 26px;
             --app-padding-bottom: 84px;
-            --card-padding: 18px 16px 16px;
-            --card-min-width: 130px;
-            --card-sprite: 86px;
+            --card-padding: 20px 18px 18px;
+            --card-min-width: 142px;
+            --card-sprite: 92px;
             --battle-padding: 28px 24px 22px;
             --battle-gap: 14px;
             --battle-side-gap: 10px;
-            --puzzle-title-size: 30px;
+            --puzzle-title-size: 33px;
             --scenario-padding: 20px 24px;
             --scenario-text-size: 16px;
             --answer-padding: 16px 20px;
             --answer-font-size: 14px;
             --footer-margin-top: 56px;
+          }
+        }
+        @media (min-width: 1600px) {
+          :root {
+            --app-max-width: 1460px;
+            --card-sprite: 96px;
+            --puzzle-title-size: 36px;
           }
         }
       `}</style>
@@ -771,8 +1316,44 @@ export default function Page() {
               <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#4a4a6a", letterSpacing: 1 }}>
                 SOLVED <span style={{ color: "#2dce7a" }}>{results.length}</span>
               </span>
+              <div ref={profileMenuRef} className="profile-menu-wrap">
+                <button
+                  type="button"
+                  className="profile-pill"
+                  onClick={() => setShowProfileMenu((v) => !v)}
+                  aria-expanded={showProfileMenu}
+                  aria-haspopup="menu"
+                >
+                  <span className="profile-dot" />
+                  {authUser?.displayName ?? "Trainer"}
+                </button>
+                {showProfileMenu && (
+                  <div className="profile-menu" role="menu">
+                    <a href="/account" className="profile-menu-item" role="menuitem">ACCOUNT</a>
+                    <a href="/puzzles/random" className="profile-menu-item" role="menuitem">RANDOM PUZZLE</a>
+                    <button type="button" className="profile-menu-item" role="menuitem" onClick={onLogout}>LOG OUT</button>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
+
+          <LoginPanel
+            authUser={authUser}
+            loginEmail={loginEmail}
+            loginPassword={loginPassword}
+            loginBusy={loginBusy}
+            loginError={loginError}
+            lockedUntil={lockedUntil}
+            authProvider={authProvider}
+            backendConfigured={backendConfigured}
+            soundEnabled={soundEnabled}
+            onSoundToggle={() => setSoundEnabled((v) => !v)}
+            onEmailChange={setLoginEmail}
+            onPasswordChange={setLoginPassword}
+            onSubmit={onLoginSubmit}
+            onLogout={onLogout}
+          />
 
           {done ? (
             <ScoreScreen score={results.filter(Boolean).length} total={PUZZLES.length} onRestart={restart} />
@@ -808,7 +1389,7 @@ export default function Page() {
               </div>
 
               {/* ── BATTLE FIELD ── */}
-              <BattleField gs={puzzle.game_state} />
+              <BattleField gs={puzzle.game_state} soundEnabled={soundEnabled} />
 
               {/* ── SCENARIO ── */}
               <div style={{ background: "#06080f", border: "1px solid #151825", borderRadius: 11, padding: "var(--scenario-padding)" }}>

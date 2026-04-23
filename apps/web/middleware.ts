@@ -6,7 +6,36 @@ import { NextResponse } from "next/server";
  * Runs on all requests
  */
 export function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const hasSession = request.cookies.get("vgc_session")?.value === "1";
+  const protectedPaths = ["/", "/account"];
+  const authPaths = ["/login", "/register"];
+  const isProtected = protectedPaths.includes(pathname) || pathname.startsWith("/puzzles");
+
+  if (isProtected && !hasSession) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("next", pathname + search);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (authPaths.includes(pathname) && hasSession) {
+    const homeUrl = request.nextUrl.clone();
+    homeUrl.pathname = "/";
+    homeUrl.search = "";
+    return NextResponse.redirect(homeUrl);
+  }
+
   const response = NextResponse.next();
+  const authApiBase = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+  let authApiOrigin = "";
+  if (authApiBase) {
+    try {
+      authApiOrigin = new URL(authApiBase).origin;
+    } catch {
+      authApiOrigin = "";
+    }
+  }
 
   // Security Headers
   response.headers.set(
@@ -28,7 +57,8 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https: blob:; " +
     "font-src 'self' data:; " +
-    "connect-src 'self' https://pokeapi.co https://raw.githubusercontent.com vercel.live; " +
+    "media-src 'self' https://raw.githubusercontent.com https://pokeapi.co; " +
+    `connect-src 'self' https://pokeapi.co https://raw.githubusercontent.com vercel.live ${authApiOrigin}; ` +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self';";

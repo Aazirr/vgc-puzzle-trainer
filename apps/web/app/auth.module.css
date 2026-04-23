@@ -1,0 +1,204 @@
+.authMain {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at 12% 8%, #111a3a 0%, #070b18 60%);
+}
+
+.authCard {
+  width: 100%;
+  max-width: 460px;
+  border-radius: 16px;
+  border: 1px solid #22305a;
+  background: linear-gradient(165deg, #0d1429 0%, #060a15 100%);
+  padding: 24px;
+  box-shadow: 0 22px 46px rgba(2, 7, 25, 0.44);
+  animation: authRise 260ms ease-out;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #74a8ff;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.title {
+  font-family: "Syne", sans-serif;
+  font-size: 32px;
+  line-height: 1.1;
+  margin: 0 0 8px;
+  color: #edf2ff;
+}
+
+.subtitle {
+  margin: 0 0 20px;
+  color: #9aa4c8;
+  font-size: 14px;
+}
+
+.modeBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin: 0 0 16px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  border: 1px solid transparent;
+}
+
+.modeBackend {
+  color: #82d7a8;
+  background: #0c2218;
+  border-color: #246a46;
+}
+
+.modeLocal {
+  color: #f8c980;
+  background: #231a0d;
+  border-color: #6d4b1b;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  color: #8e9bc6;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.input {
+  border: 1px solid #2a3868;
+  border-radius: 10px;
+  background: #0a1123;
+  color: #dee6ff;
+  padding: 11px 12px;
+  font-size: 14px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.input:focus {
+  border-color: #5a8dff;
+  box-shadow: 0 0 0 3px rgba(90, 141, 255, 0.16);
+  outline: none;
+}
+
+.primaryBtn {
+  margin-top: 4px;
+  border: 1px solid #5a8dff5e;
+  background: linear-gradient(160deg, #0e1f45 0%, #0a1532 100%);
+  color: #9bc3ff;
+  border-radius: 10px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 12px 16px;
+  min-height: 44px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  color: #f89a9a;
+  font-size: 12px;
+}
+
+.footerRow {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link {
+  color: #8cb8ff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: #b3d0ff;
+  text-decoration: underline;
+}
+
+.accountCard {
+  width: 100%;
+  max-width: 620px;
+}
+
+.accountMeta {
+  margin: 0;
+  color: #a3aed4;
+  line-height: 1.6;
+}
+
+.accountActions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.secondaryBtn {
+  border: 1px solid #2b3e75;
+  background: #0a1229;
+  color: #93beff;
+  border-radius: 10px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 11px 16px;
+  text-decoration: none;
+}
+
+.secondaryBtn:hover {
+  border-color: #4f75d2;
+}
+
+@keyframes authRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .authMain {
+    padding: 16px 10px;
+  }
+
+  .authCard {
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+}
