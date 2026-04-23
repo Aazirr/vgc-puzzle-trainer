@@ -179,16 +179,8 @@ export function getAuthProviderStatus(): {
 } {
   const apiBase = getAuthApiBase();
   const backendConfigured = apiBase.length > 0;
-  const stored = readStoredProvider();
-  if (stored) {
-    return {
-      provider: stored,
-      backendConfigured,
-      apiBase: backendConfigured ? apiBase : null,
-    };
-  }
   return {
-    provider: backendConfigured ? "backend" : "local",
+    provider: "backend",
     backendConfigured,
     apiBase: backendConfigured ? apiBase : null,
   };
@@ -203,30 +195,12 @@ export async function registerUser(input: AuthInput): Promise<{ ok: true; user: 
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
 
   const apiUser = await tryApiAuth("register", { email, password, displayName });
-  if (apiUser) {
-    writeStoredProvider("backend");
-    persistSession(apiUser);
-    return { ok: true, user: apiUser };
+  if (!apiUser) {
+    return { ok: false, message: "Backend auth service is unavailable or registration failed." };
   }
 
-  const accounts = readLocalAccounts();
-  if (accounts.some((a) => a.email === email)) {
-    return { ok: false, message: "This email is already registered." };
-  }
-
-  const passwordHash = await hashPassword(password);
-  accounts.push({
-    email,
-    displayName,
-    passwordHash,
-    createdAt: Date.now(),
-  });
-  writeLocalAccounts(accounts);
-
-  const user = toAuthUser(email, displayName);
-  writeStoredProvider("local");
-  persistSession(user);
-  return { ok: true, user };
+  persistSession(apiUser);
+  return { ok: true, user: apiUser };
 }
 
 export async function loginUser(input: AuthInput): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
@@ -237,23 +211,10 @@ export async function loginUser(input: AuthInput): Promise<{ ok: true; user: Aut
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
 
   const apiUser = await tryApiAuth("login", { email, password });
-  if (apiUser) {
-    writeStoredProvider("backend");
-    persistSession(apiUser);
-    return { ok: true, user: apiUser };
+  if (!apiUser) {
+    return { ok: false, message: "Backend auth service is unavailable or login failed." };
   }
 
-  const accounts = readLocalAccounts();
-  const account = accounts.find((a) => a.email === email);
-  if (!account) return { ok: false, message: "Invalid email or password." };
-
-  const passwordHash = await hashPassword(password);
-  if (passwordHash !== account.passwordHash) {
-    return { ok: false, message: "Invalid email or password." };
-  }
-
-  const user = toAuthUser(account.email, account.displayName);
-  writeStoredProvider("local");
-  persistSession(user);
-  return { ok: true, user };
+  persistSession(apiUser);
+  return { ok: true, user: apiUser };
 }

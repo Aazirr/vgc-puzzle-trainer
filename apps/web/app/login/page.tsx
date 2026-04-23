@@ -70,10 +70,8 @@ export default function LoginPage() {
         <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
         <h1 className={styles.title}>Welcome Back</h1>
         <p className={styles.subtitle}>Sign in to continue your puzzle sessions and sound settings.</p>
-        <span className={`${styles.modeBadge} ${authProvider === "backend" ? styles.modeBackend : styles.modeLocal}`}>
-          {backendConfigured
-            ? (authProvider === "backend" ? "AUTH: BACKEND" : "AUTH: LOCAL FALLBACK")
-            : "AUTH: LOCAL ONLY"}
+        <span className={`${styles.modeBadge} ${backendConfigured ? styles.modeBackend : styles.modeLocal}`}>
+          {backendConfigured ? "AUTH: BACKEND" : "AUTH: BACKEND UNCONFIGURED"}
         </span>
 
         <form className={styles.form} onSubmit={onSubmit} autoComplete="on">
