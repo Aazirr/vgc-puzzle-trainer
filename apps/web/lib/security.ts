@@ -24,7 +24,11 @@ export function validateEmail(email: string): boolean {
  * Note: This should ideally be set on the server via headers
  */
 export function getCSPMeta(): Record<string, string> {
-  const authApiBase = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+  const authApiBase = (
+    process.env.NEXT_PUBLIC_AUTH_API_BASE ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ""
+  ).trim().replace(/\/+$/, "");
   let authApiOrigin = "";
   if (authApiBase) {
     try {
