@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Security: sanitize all dynamic strings before render ─────────────────────
-function san(str) {
+function san(str: unknown): string {
   if (typeof str !== "string") return "";
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
             .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
@@ -12,12 +12,12 @@ function san(str) {
 
 // ─── Asset helpers ────────────────────────────────────────────────────────────
 // Showdown animated sprite (front, from PokeAPI sprites repo which mirrors Showdown)
-const showdownSprite = (slug) =>
+const showdownSprite = (slug: string): string =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${san(slug)}.gif`;
-const showdownSpriteBack = (slug) =>
+const showdownSpriteBack = (slug: string): string =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/${san(slug)}.gif`;
 // Official artwork fallback
-const officialArt = (id) =>
+const officialArt = (id: number): string =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 // Showdown item sprite
 const itemSprite = (itemSlug) =>
