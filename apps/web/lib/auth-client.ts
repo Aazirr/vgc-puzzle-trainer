@@ -28,9 +28,13 @@ const AUTH_PROVIDER_KEY = "vgc.frontend.auth_provider.v1";
 const AUTH_API_BASE = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
 const API_URL_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
+function normalizeApiBase(input: string): string {
+  return input.trim().replace(/\/+$/, "");
+}
+
 function getAuthApiBase(): string {
-  if (AUTH_API_BASE) return AUTH_API_BASE;
-  if (API_URL_BASE) return API_URL_BASE;
+  if (AUTH_API_BASE) return normalizeApiBase(AUTH_API_BASE);
+  if (API_URL_BASE) return normalizeApiBase(API_URL_BASE);
 
   if (typeof window !== "undefined") {
     const host = window.location.hostname.toLowerCase();
@@ -138,9 +142,15 @@ function extractApiUser(payload: unknown): AuthUser | null {
 async function tryApiAuth(
   path: "login" | "register",
   input: AuthInput
-): Promise<AuthUser | null> {
+): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
   const apiBase = getAuthApiBase();
-  if (!apiBase) return null;
+  if (!apiBase) {
+    return {
+      ok: false,
+      message: "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+    };
+  }
+
   try {
     const response = await fetch(`${apiBase}/auth/${path}`, {
       method: "POST",
@@ -151,11 +161,29 @@ async function tryApiAuth(
         displayName: input.displayName,
       }),
     });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    return extractApiUser(payload);
-  } catch {
-    return null;
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
+        ? payload.message
+        : `Backend auth ${path} failed with status ${response.status}.`;
+      return { ok: false, message };
+    }
+
+    const user = extractApiUser(payload);
+    if (!user) {
+      return { ok: false, message: "Backend auth response did not include a valid user." };
+    }
+
+    return { ok: true, user };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof TypeError
+        ? `Could not reach backend auth API at ${apiBase}. Check Vercel env, Railway domain, CORS_ORIGINS, and CSP.`
+        : error instanceof Error
+          ? error.message
+          : "Could not reach backend auth API.",
+    };
   }
 }
 
@@ -211,13 +239,13 @@ export async function registerUser(input: AuthInput): Promise<{ ok: true; user: 
     };
   }
 
-  const apiUser = await tryApiAuth("register", { email, password, displayName });
-  if (!apiUser) {
-    return { ok: false, message: "Backend auth service is unavailable or registration failed." };
+  const apiResult = await tryApiAuth("register", { email, password, displayName });
+  if (!apiResult.ok) {
+    return { ok: false, message: apiResult.message };
   }
 
-  persistSession(apiUser);
-  return { ok: true, user: apiUser };
+  persistSession(apiResult.user);
+  return { ok: true, user: apiResult.user };
 }
 
 export async function loginUser(input: AuthInput): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
@@ -235,11 +263,11 @@ export async function loginUser(input: AuthInput): Promise<{ ok: true; user: Aut
     };
   }
 
-  const apiUser = await tryApiAuth("login", { email, password });
-  if (!apiUser) {
-    return { ok: false, message: "Backend auth service is unavailable or login failed." };
+  const apiResult = await tryApiAuth("login", { email, password });
+  if (!apiResult.ok) {
+    return { ok: false, message: apiResult.message };
   }
 
-  persistSession(apiUser);
-  return { ok: true, user: apiUser };
+  persistSession(apiResult.user);
+  return { ok: true, user: apiResult.user };
 }

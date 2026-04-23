@@ -27,7 +27,11 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  const authApiBase = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+  const authApiBase = (
+    process.env.NEXT_PUBLIC_AUTH_API_BASE ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ""
+  ).trim().replace(/\/+$/, "");
   let authApiOrigin = "";
   if (authApiBase) {
     try {
