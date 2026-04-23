@@ -1,9 +1,10 @@
 # @vgc/api
 
-Express API server.
+Express API server for auth, puzzle serving, submissions, voting, and moderation.
 
-## Phase 0 responsibilities
+## Phase 0 backend foundation
 
-- Define route contracts
-- Add auth and puzzle serving skeleton
-- Add DB client wiring
+- Structured app/bootstrap entrypoint
+- Route modules for health and puzzle contract stubs
+- Initial SQL migration for core data model
+- Shared puzzle contracts imported from `packages/domain`
