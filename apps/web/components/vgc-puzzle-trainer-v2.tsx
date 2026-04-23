@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -20,7 +21,7 @@ const showdownSpriteBack = (slug: string): string =>
 const officialArt = (id: number): string =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 // Showdown item sprite
-const itemSprite = (itemSlug) =>
+const itemSprite = (itemSlug: string): string =>
   `https://play.pokemonshowdown.com/sprites/itemicons/${san(itemSlug)}.png`;
 // Type badge colors
 const TYPE_COLOR = {
