@@ -17,6 +17,17 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - Completed: TypeScript compiles with zero errors across all workspaces
 - Not yet verified: replay fixture determinism against live parser inputs
 
+### Progress Update (2026-04-23)
+
+- Completed: backend work branch renamed from `backend-phase-0` to `backend`
+- Verified: API package builds successfully
+- Verified: pipeline package builds successfully
+- Verified: replay tokenizer/state rebuild/snapshot fixture tests pass
+- Verified: shared `domain`, `explanations`, and `showdown-adapter` packages build successfully
+- Confirmed: Phase 1 puzzle API routes exist as backend stubs and still return `501 not_implemented`
+- Still pending: migration smoke test against a fresh PostgreSQL database
+- Still pending: replay fixture determinism against live parser inputs
+
 ### Build Checklist
 
 - [x] Create app/package folder structure
@@ -28,7 +39,7 @@ Use these checklists to track phase completion and reduce missed dependencies.
 - [x] Add .env.example with all required environment variable keys
 - [x] Configure TypeScript (tsconfig.json) across workspaces
 - [x] Add Showdown engine as git submodule
-- [ ] Define and freeze shared TypeScript interfaces in contracts package
+- [x] Define and freeze shared TypeScript interfaces in contracts package
 
 ### Validation Checklist
 
@@ -43,6 +54,12 @@ Use these checklists to track phase completion and reduce missed dependencies.
 The backend is currently at a runnable foundation stage: API boots, database migrations can be executed through the app workspace, readiness checks can verify DB access, the replay pipeline reconstructs deterministic snapshots from fixture logs, the migration smoke-test path now exists for disposable databases, and workspace TypeScript configuration is validated.
 
 ## Phase 1 - MVP Puzzle Loop
+
+### Current Backend Status (2026-04-23)
+
+- Route stubs exist for puzzle listing, puzzle fetch, and answer submission
+- These routes intentionally return `501 not_implemented` until the next backend slice
+- No seeded puzzle repository, answer hiding, answer evaluation, attempt recording, or filtering logic is implemented yet
 
 ### Build Checklist
 
