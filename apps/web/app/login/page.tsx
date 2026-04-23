@@ -64,21 +64,14 @@ export default function LoginPage() {
     router.replace(nextPath);
   }, [busy, email, lockedUntil, password, router]);
 
-  const fillTestAccount = useCallback(() => {
-    setEmail("test@example.com");
-    setPassword("TestPassword123");
-  }, []);
-
   return (
     <main className={styles.authMain}>
       <section className={styles.authCard}>
         <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
         <h1 className={styles.title}>Welcome Back</h1>
         <p className={styles.subtitle}>Sign in to continue your puzzle sessions and sound settings.</p>
-        <span className={`${styles.modeBadge} ${authProvider === "backend" ? styles.modeBackend : styles.modeLocal}`}>
-          {backendConfigured
-            ? (authProvider === "backend" ? "AUTH: BACKEND" : "AUTH: LOCAL FALLBACK")
-            : "AUTH: LOCAL ONLY"}
+        <span className={`${styles.modeBadge} ${backendConfigured ? styles.modeBackend : styles.modeLocal}`}>
+          {backendConfigured ? "AUTH: BACKEND" : "AUTH: BACKEND UNCONFIGURED"}
         </span>
 
         <form className={styles.form} onSubmit={onSubmit} autoComplete="on">
@@ -111,14 +104,6 @@ export default function LoginPage() {
             {busy ? "SIGNING IN..." : "SIGN IN"}
           </button>
           {error && <p className={styles.error}>{error}</p>}
-          <button
-            className={styles.secondaryBtn}
-            type="button"
-            onClick={fillTestAccount}
-            disabled={busy}
-          >
-            Use Demo Account (test@example.com)
-          </button>
         </form>
 
         <div className={styles.footerRow}>

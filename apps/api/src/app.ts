@@ -12,10 +12,12 @@ export function createApiApp() {
 
   app.use((req, res, next) => {
     const requestOrigin = req.header("Origin");
-    const allowAnyOrigin = env.corsOrigins.includes("*");
-    const allowedOrigin = requestOrigin && (allowAnyOrigin || env.corsOrigins.includes(requestOrigin))
-      ? requestOrigin
-      : null;
+    const allowAnyOrigin = env.corsOrigins.includes("*") || (env.corsOrigins.length === 0 && env.nodeEnv === "development");
+    const allowedOrigin = allowAnyOrigin
+      ? (requestOrigin ?? "*")
+      : requestOrigin && env.corsOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : null;
 
     if (allowedOrigin) {
       res.header("Access-Control-Allow-Origin", allowedOrigin);

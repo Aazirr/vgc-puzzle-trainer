@@ -26,6 +26,26 @@ const ACCOUNTS_KEY = "vgc.frontend.accounts.v1";
 const SESSION_COOKIE = "vgc_session";
 const AUTH_PROVIDER_KEY = "vgc.frontend.auth_provider.v1";
 const AUTH_API_BASE = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
+const API_URL_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+
+function getAuthApiBase(): string {
+  if (AUTH_API_BASE) return AUTH_API_BASE;
+  if (API_URL_BASE) return API_URL_BASE;
+
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".local")
+    ) {
+      return "http://localhost:3001";
+    }
+  }
+
+  return "";
+}
 
 function normalizeDisplayName(input: string | undefined, email: string): string {
   const base = sanitizeInput(input ?? "").trim();
@@ -47,30 +67,6 @@ async function hashPassword(password: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", encoded);
   const bytes = Array.from(new Uint8Array(digest));
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Seed test account for development/testing
-async function seedTestAccount(): Promise<void> {
-  if (typeof window === "undefined") return;
-  const accounts = readLocalAccounts();
-  const testEmail = "test@example.com";
-  if (accounts.some((a) => a.email === testEmail)) return; // Already exists
-
-  const passwordHash = await hashPassword("TestPassword123");
-  accounts.push({
-    email: testEmail,
-    displayName: "Test Trainer",
-    passwordHash,
-    createdAt: Date.now(),
-  });
-  writeLocalAccounts(accounts);
-}
-
-// Auto-seed test account on module load
-if (typeof window !== "undefined") {
-  seedTestAccount().catch(() => {
-    // Silently fail if seeding doesn't work
-  });
 }
 
 function readLocalAccounts(): LocalAccount[] {
@@ -143,9 +139,10 @@ async function tryApiAuth(
   path: "login" | "register",
   input: AuthInput
 ): Promise<AuthUser | null> {
-  if (!AUTH_API_BASE) return null;
+  const apiBase = getAuthApiBase();
+  if (!apiBase) return null;
   try {
-    const response = await fetch(`${AUTH_API_BASE}/auth/${path}`, {
+    const response = await fetch(`${apiBase}/auth/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -189,19 +186,12 @@ export function getAuthProviderStatus(): {
   backendConfigured: boolean;
   apiBase: string | null;
 } {
-  const backendConfigured = AUTH_API_BASE.length > 0;
-  const stored = readStoredProvider();
-  if (stored) {
-    return {
-      provider: stored,
-      backendConfigured,
-      apiBase: backendConfigured ? AUTH_API_BASE : null,
-    };
-  }
+  const apiBase = getAuthApiBase();
+  const backendConfigured = apiBase.length > 0;
   return {
-    provider: backendConfigured ? "backend" : "local",
+    provider: "backend",
     backendConfigured,
-    apiBase: backendConfigured ? AUTH_API_BASE : null,
+    apiBase: backendConfigured ? apiBase : null,
   };
 }
 
@@ -213,31 +203,21 @@ export async function registerUser(input: AuthInput): Promise<{ ok: true; user: 
   if (!validateEmail(email)) return { ok: false, message: "Please provide a valid email." };
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
 
+  if (!getAuthApiBase()) {
+    return {
+      ok: false,
+      message:
+        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+    };
+  }
+
   const apiUser = await tryApiAuth("register", { email, password, displayName });
-  if (apiUser) {
-    writeStoredProvider("backend");
-    persistSession(apiUser);
-    return { ok: true, user: apiUser };
+  if (!apiUser) {
+    return { ok: false, message: "Backend auth service is unavailable or registration failed." };
   }
 
-  const accounts = readLocalAccounts();
-  if (accounts.some((a) => a.email === email)) {
-    return { ok: false, message: "This email is already registered." };
-  }
-
-  const passwordHash = await hashPassword(password);
-  accounts.push({
-    email,
-    displayName,
-    passwordHash,
-    createdAt: Date.now(),
-  });
-  writeLocalAccounts(accounts);
-
-  const user = toAuthUser(email, displayName);
-  writeStoredProvider("local");
-  persistSession(user);
-  return { ok: true, user };
+  persistSession(apiUser);
+  return { ok: true, user: apiUser };
 }
 
 export async function loginUser(input: AuthInput): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
@@ -247,24 +227,19 @@ export async function loginUser(input: AuthInput): Promise<{ ok: true; user: Aut
   if (!validateEmail(email)) return { ok: false, message: "Please provide a valid email." };
   if (!passwordStrongEnough(password)) return { ok: false, message: "Password must be 8-120 characters." };
 
+  if (!getAuthApiBase()) {
+    return {
+      ok: false,
+      message:
+        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+    };
+  }
+
   const apiUser = await tryApiAuth("login", { email, password });
-  if (apiUser) {
-    writeStoredProvider("backend");
-    persistSession(apiUser);
-    return { ok: true, user: apiUser };
+  if (!apiUser) {
+    return { ok: false, message: "Backend auth service is unavailable or login failed." };
   }
 
-  const accounts = readLocalAccounts();
-  const account = accounts.find((a) => a.email === email);
-  if (!account) return { ok: false, message: "Invalid email or password." };
-
-  const passwordHash = await hashPassword(password);
-  if (passwordHash !== account.passwordHash) {
-    return { ok: false, message: "Invalid email or password." };
-  }
-
-  const user = toAuthUser(account.email, account.displayName);
-  writeStoredProvider("local");
-  persistSession(user);
-  return { ok: true, user };
+  persistSession(apiUser);
+  return { ok: true, user: apiUser };
 }

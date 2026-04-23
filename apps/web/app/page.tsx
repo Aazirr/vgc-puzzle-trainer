@@ -792,8 +792,8 @@ function LoginPanel({
   const lockedSeconds = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const lockActive = lockedSeconds > 0;
   const authModeText = backendConfigured
-    ? (authProvider === "backend" ? "AUTH: BACKEND" : "AUTH: LOCAL FALLBACK")
-    : "AUTH: LOCAL ONLY";
+    ? "AUTH: BACKEND"
+    : "AUTH: BACKEND UNCONFIGURED";
 
   return (
     <section className="login-panel" aria-label="Frontend login tools">
