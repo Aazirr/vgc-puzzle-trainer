@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "npm --workspace @vgc/explanations run build && tsc -p tsconfig.json",
+    "build": "npm --workspace @vgc/explanations run build && npm --workspace @vgc/api exec -- tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:smoke-test": "tsx src/db/smoke-test.ts",
