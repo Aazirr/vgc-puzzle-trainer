@@ -1,6 +1,8 @@
+import crypto from "node:crypto";
 import type { Express } from "express";
+import { renderMechanicalExplanation, type PuzzleExplanationTemplate } from "@vgc/explanations";
 import { loadApiEnv } from "../config/env.js";
-import { createDatabaseClient } from "../db/client.js";
+import { createDatabaseClient, type DatabaseClient } from "../db/client.js";
 
 interface PuzzleAction {
   type: string;
@@ -18,7 +20,7 @@ interface PuzzleRow {
   question_type: string;
   correct_action: PuzzleAction;
   wrong_actions: PuzzleAction[];
-  explanation: unknown;
+  explanation: PuzzleExplanationTemplate;
   difficulty: number;
   tags: string[];
   status: string;
@@ -71,6 +73,24 @@ function unwrapSelectedAction(input: unknown): unknown {
     return (input as { action: unknown }).action;
   }
   return input;
+}
+
+async function updateUserStreak(client: DatabaseClient, userId: string, correct: boolean) {
+  await client.query(
+    `INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_attempt_at)
+     VALUES ($1, $2, $2, now())
+     ON CONFLICT (user_id) DO UPDATE
+     SET current_streak = CASE
+           WHEN $3::boolean THEN user_streaks.current_streak + 1
+           ELSE 0
+         END,
+         longest_streak = CASE
+           WHEN $3::boolean THEN GREATEST(user_streaks.longest_streak, user_streaks.current_streak + 1)
+           ELSE user_streaks.longest_streak
+         END,
+         last_attempt_at = now()`,
+    [userId, correct ? 1 : 0, correct]
+  );
 }
 
 function shuffleActions(actions: PuzzleAction[]) {
@@ -243,7 +263,9 @@ export function registerPuzzleRoutes(app: Express) {
       return;
     }
 
-    const guestToken = typeof body.guestToken === "string" ? body.guestToken.trim() : null;
+    const guestToken = typeof body.guestToken === "string" && body.guestToken.trim()
+      ? body.guestToken.trim()
+      : crypto.randomUUID();
     const userId = typeof body.userId === "string" ? body.userId.trim() : null;
     const timeTaken = typeof body.timeTaken === "number" && Number.isFinite(body.timeTaken)
       ? Math.round(body.timeTaken)
@@ -265,18 +287,28 @@ export function registerPuzzleRoutes(app: Express) {
       }
 
       const correct = isSameAction(selectedAction, puzzle.correct_action);
+      await client.query("BEGIN");
       await client.query(
         `INSERT INTO puzzle_attempts (puzzle_id, user_id, guest_token, correct, time_taken)
          VALUES ($1, $2, $3, $4, $5)`,
         [puzzle.id, userId || null, guestToken || null, correct, timeTaken]
       );
+      if (userId) {
+        await updateUserStreak(client, userId, correct);
+      }
+      await client.query("COMMIT");
 
       res.json({
         correct,
-        explanation: puzzle.explanation,
-        correctAction: puzzle.correct_action
+        explanation: {
+          ...puzzle.explanation,
+          mechanicalText: renderMechanicalExplanation(puzzle.explanation)
+        },
+        correctAction: puzzle.correct_action,
+        guestToken
       });
     } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
       res.status(500).json({
         error: "answer_submit_failed",
         message: error instanceof Error ? error.message : "Failed to submit answer."

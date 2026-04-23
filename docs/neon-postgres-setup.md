@@ -65,6 +65,11 @@ The required migrations are already present in `apps/api/db/migrations`.
 - 10 approved Phase 1 starter puzzles
 - seed coverage across speed checks, KO thresholds, and field interactions
 
+`0004_attempt_history_indexes.sql` adds:
+
+- guest token lookup index for guest attempt continuity
+- puzzle attempt lookup indexes for history/progress queries
+
 ## Current Migration SQL
 
 ```sql
