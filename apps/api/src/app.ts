@@ -1,5 +1,6 @@
 import express from "express";
 import { loadApiEnv } from "./config/env.js";
+import { registerAttemptRoutes } from "./routes/attempts.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerPuzzleRoutes } from "./routes/puzzles.js";
@@ -32,6 +33,7 @@ export function createApiApp() {
   registerHealthRoutes(app);
   registerReadyRoutes(app);
   registerAuthRoutes(app);
+  registerAttemptRoutes(app);
   registerPuzzleRoutes(app);
 
   return app;
