@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { RateLimiter } from "@/lib/security";
 import { useAuth } from "@/components/AuthProvider";
 import styles from "../auth.module.css";
 
 const LOGIN_LOCK_MS = 30_000;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading, isAuthenticated, backendConfigured, login } = useAuth();
+  const { isLoading, isAuthenticated, backendConfigured, login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -150,6 +150,23 @@ export default function LoginPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className={styles.authMain}>
+          <section className={styles.authCard}>
+            <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
+            <h1 className={styles.title}>Loading...</h1>
+          </section>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
 
