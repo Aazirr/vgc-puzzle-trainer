@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm --workspace @vgc/showdown-adapter run build && npm --workspace @vgc/pipeline exec -- tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "tsx --test src/replay/tokenize-log.test.ts",
     "typecheck": "tsc --noEmit",

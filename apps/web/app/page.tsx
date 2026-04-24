@@ -9,7 +9,6 @@ interface PokemonSnapshot {
   name: string;
   hp: number;
   max_hp: number;
-  speed: number;
   status: string | null;
   item: string;
   types: string[];
@@ -288,12 +287,12 @@ const PUZZLES: Puzzle[] = [
       "Your Miraidon is at +0 speed. The opponent's Iron Hands is also +0 with no boosts. Electric Terrain is active. Which of your active Pokémon is guaranteed to move before Iron Hands this turn?",
     game_state: {
       your_side: [
-        { name: "Miraidon",     hp: 100, max_hp: 167, speed: 135, status: null, item: "Choice Specs",    types: ["Electric","Dragon"], tera: false },
-        { name: "Flutter Mane", hp: 78,  max_hp: 131, speed: 135, status: null, item: "Focus Sash",      types: ["Ghost","Fairy"],     tera: false },
+        { name: "Miraidon",     hp: 100, max_hp: 167, status: null, item: "Choice Specs",    types: ["Electric","Dragon"], tera: false },
+        { name: "Flutter Mane", hp: 78,  max_hp: 131, status: null, item: "Focus Sash",      types: ["Ghost","Fairy"],     tera: false },
       ],
       opp_side: [
-        { name: "Iron Hands",  hp: 100, max_hp: 227, speed: 50, status: null, item: "Assault Vest", types: ["Fighting","Electric"], tera: false },
-        { name: "Rillaboom",   hp: 55,  max_hp: 197, speed: 85, status: null, item: "Choice Band",  types: ["Grass"],               tera: false },
+        { name: "Iron Hands",  hp: 100, max_hp: 227, status: null, item: "Assault Vest", types: ["Fighting","Electric"], tera: false },
+        { name: "Rillaboom",   hp: 55,  max_hp: 197, status: null, item: "Choice Band",  types: ["Grass"],               tera: false },
       ],
       field: { weather: null, terrain: "Electric Terrain", trick_room: false },
     },
@@ -320,12 +319,12 @@ const PUZZLES: Puzzle[] = [
       "Your Choice Band Urshifu-Rapid-Strike uses Surging Strikes (3 hits, each a guaranteed critical hit) on the opposing Dondozo at full HP. No weather, no terrain, no boosts. Does Urshifu guarantee a KO?",
     game_state: {
       your_side: [
-        { name: "Urshifu-Rapid", hp: 100, max_hp: 175, speed: 97, status: null, item: "Choice Band",      types: ["Water","Fighting"], tera: false },
-        { name: "Calyrex-Ice",   hp: 90,  max_hp: 175, speed: 50, status: null, item: "Weakness Policy", types: ["Psychic","Ice"],    tera: false },
+        { name: "Urshifu-Rapid", hp: 100, max_hp: 175, status: null, item: "Choice Band",      types: ["Water","Fighting"], tera: false },
+        { name: "Calyrex-Ice",   hp: 90,  max_hp: 175, status: null, item: "Weakness Policy", types: ["Psychic","Ice"],    tera: false },
       ],
       opp_side: [
-        { name: "Dondozo",    hp: 100, max_hp: 285, speed: 35, status: null, item: "Leftovers",    types: ["Water"],          tera: false },
-        { name: "Tatsugiri",  hp: 100, max_hp: 131, speed: 75, status: null, item: "Choice Scarf", types: ["Dragon","Water"], tera: false },
+        { name: "Dondozo",    hp: 100, max_hp: 285, status: null, item: "Leftovers",    types: ["Water"],          tera: false },
+        { name: "Tatsugiri",  hp: 100, max_hp: 131, status: null, item: "Choice Scarf", types: ["Dragon","Water"], tera: false },
       ],
       field: { weather: null, terrain: null, trick_room: false },
     },
@@ -352,12 +351,12 @@ const PUZZLES: Puzzle[] = [
       "Indeedee-F sets Psychic Terrain on its switch-in. Next turn, the opposing Amoonguss targets your Flutter Mane with Spore. Flutter Mane is not holding a Safety Goggles. Does Spore land?",
     game_state: {
       your_side: [
-        { name: "Indeedee-F",   hp: 100, max_hp: 130, speed: 95,  status: null, item: "Psychic Seed",  types: ["Psychic","Normal"], tera: false },
-        { name: "Flutter Mane", hp: 100, max_hp: 131, speed: 135, status: null, item: "Focus Sash",    types: ["Ghost","Fairy"],    tera: false },
+        { name: "Indeedee-F",   hp: 100, max_hp: 130, status: null, item: "Psychic Seed",  types: ["Psychic","Normal"], tera: false },
+        { name: "Flutter Mane", hp: 100, max_hp: 131, status: null, item: "Focus Sash",    types: ["Ghost","Fairy"],    tera: false },
       ],
       opp_side: [
-        { name: "Amoonguss", hp: 100, max_hp: 197, speed: 30, status: null, item: "Rocky Helmet", types: ["Grass","Poison"], tera: false },
-        { name: "Kingambit", hp: 100, max_hp: 191, speed: 50, status: null, item: "Black Glasses", types: ["Dark","Steel"],  tera: false },
+        { name: "Amoonguss", hp: 100, max_hp: 197, status: null, item: "Rocky Helmet", types: ["Grass","Poison"], tera: false },
+        { name: "Kingambit", hp: 100, max_hp: 191, status: null, item: "Black Glasses", types: ["Dark","Steel"],  tera: false },
       ],
       field: { weather: null, terrain: "Psychic Terrain", trick_room: false },
     },
@@ -384,12 +383,12 @@ const PUZZLES: Puzzle[] = [
       "Trick Room is active (3 turns remaining). Your Calyrex-Ice Rider has no speed investment. The opponent's Miraidon has Choice Scarf. Under Trick Room, who moves first?",
     game_state: {
       your_side: [
-        { name: "Calyrex-Ice", hp: 100, max_hp: 175, speed: 50, status: null, item: "Weakness Policy", types: ["Psychic","Ice"], tera: false },
-        { name: "Amoonguss",   hp: 85,  max_hp: 197, speed: 30, status: null, item: "Rocky Helmet",   types: ["Grass","Poison"], tera: false },
+        { name: "Calyrex-Ice", hp: 100, max_hp: 175, status: null, item: "Weakness Policy", types: ["Psychic","Ice"], tera: false },
+        { name: "Amoonguss",   hp: 85,  max_hp: 197, status: null, item: "Rocky Helmet",   types: ["Grass","Poison"], tera: false },
       ],
       opp_side: [
-        { name: "Miraidon",  hp: 100, max_hp: 167, speed: 135, status: null, item: "Choice Scarf", types: ["Electric","Dragon"], tera: false },
-        { name: "Iron Hands", hp: 80, max_hp: 227, speed: 50,  status: null, item: "Assault Vest", types: ["Fighting","Electric"], tera: false },
+        { name: "Miraidon",  hp: 100, max_hp: 167, status: null, item: "Choice Scarf", types: ["Electric","Dragon"], tera: false },
+        { name: "Iron Hands", hp: 80, max_hp: 227, status: null, item: "Assault Vest", types: ["Fighting","Electric"], tera: false },
       ],
       field: { weather: null, terrain: "Electric Terrain", trick_room: true, trick_room_turns: 3 },
     },
@@ -542,11 +541,6 @@ const PokemonCard = memo(function PokemonCard({
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "#5a5a7a" }}>HP</span>
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "#8888aa" }}>{hpPct}%</span>
         </div>
-      </div>
-
-      {/* speed */}
-      <div style={{ marginTop: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#5a5a7a" }}>
-        <span style={{ color: "#7dd3fc" }}>SPD</span> {mon.speed}
       </div>
 
       {/* item */}

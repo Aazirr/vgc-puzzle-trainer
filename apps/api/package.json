@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm --workspace @vgc/explanations run build && npm --workspace @vgc/api exec -- tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:smoke-test": "tsx src/db/smoke-test.ts",
@@ -13,6 +13,7 @@
     "lint": "echo \"Add linter in Phase 0.1\""
   },
   "dependencies": {
+    "@vgc/explanations": "file:../../packages/explanations",
     "express": "^4.22.1",
     "pg": "8.15.6"
   },

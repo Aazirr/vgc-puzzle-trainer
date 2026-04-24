@@ -19,7 +19,15 @@ The API exposes minimal email/password auth endpoints to unblock the current fro
 Required runtime environment:
 
 - `DATABASE_URL`
-- `CORS_ORIGIN` when the frontend is served from another origin
+- `CORS_ORIGINS` when the frontend is served from another origin
+
+`CORS_ORIGINS` accepts a comma-separated allowlist. Keep the values as origins only, with no trailing slash:
+
+```env
+CORS_ORIGINS=https://your-production-web.vercel.app,https://your-preview-web.vercel.app,http://localhost:3000
+```
+
+`CORS_ORIGIN` is still accepted for a single-origin deployment.
 
 ## Puzzle API
 
@@ -29,5 +37,9 @@ The API exposes the Phase 1 puzzle loop foundation:
 - `GET /api/puzzles/random`
 - `GET /api/puzzles/:id`
 - `POST /api/puzzles/:id/answer`
+- `GET /api/attempts`
+- `GET /api/users/:id/progress`
 
 Puzzle fetch responses include shuffled action choices without correctness labels and do not include the explanation until after answer submission. Answer submissions compare the selected action to the stored deterministic correct action and record an attempt when the puzzle exists.
+
+If an answer submission does not include a `guestToken`, the API generates one and returns it in the response so clients can persist guest attempt continuity. If a submission includes `userId`, the API updates `user_streaks` and authenticated progress can be read from `/api/users/:id/progress`.
