@@ -61,6 +61,16 @@ const nextConfig = {
     ];
   },
 
+  // Rewrites for auth proxy (same-origin calls → backend API)
+  rewrites: async () => {
+    return [
+      {
+        source: "/auth/:path*",
+        destination: "/api/auth/:path*",
+      },
+    ];
+  },
+
   // Redirects for better UX
   redirects: async () => {
     return [
