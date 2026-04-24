@@ -78,12 +78,12 @@ const PUZZLES = [
     prompt:"Your Miraidon is at +0 speed. The opponent's Iron Hands is also +0 with no boosts. Electric Terrain is active. Which of your active Pokémon is guaranteed to move before Iron Hands this turn?",
     game_state:{
       your_side:[
-        { name:"Miraidon",     hp:100,max_hp:167,speed:135,status:null,item:"Choice Specs",  types:["Electric","Dragon"], tera:false },
-        { name:"Flutter Mane", hp:78, max_hp:131,speed:135,status:null,item:"Focus Sash",    types:["Ghost","Fairy"],     tera:false },
+        { name:"Miraidon",     hp:100,max_hp:167,status:null,item:"Choice Specs",  types:["Electric","Dragon"], tera:false },
+        { name:"Flutter Mane", hp:78, max_hp:131,status:null,item:"Focus Sash",    types:["Ghost","Fairy"],     tera:false },
       ],
       opp_side:[
-        { name:"Iron Hands",   hp:100,max_hp:227,speed:50, status:null,item:"Assault Vest",  types:["Fighting","Electric"],tera:false },
-        { name:"Rillaboom",    hp:55, max_hp:197,speed:85, status:null,item:"Choice Band",   types:["Grass"],             tera:false },
+        { name:"Iron Hands",   hp:100,max_hp:227,status:null,item:"Assault Vest",  types:["Fighting","Electric"],tera:false },
+        { name:"Rillaboom",    hp:55, max_hp:197,status:null,item:"Choice Band",   types:["Grass"],             tera:false },
       ],
       field:{ weather:null, terrain:"Electric Terrain", trick_room:false, tailwind:{your:false,opp:false} },
     },
@@ -105,12 +105,12 @@ const PUZZLES = [
     prompt:"Your Choice Band Urshifu-Rapid-Strike uses Surging Strikes (3 hits, each a guaranteed critical hit) on the opposing Dondozo at full HP. No weather, no terrain, no boosts. Does Urshifu guarantee a KO?",
     game_state:{
       your_side:[
-        { name:"Urshifu-Rapid", hp:100,max_hp:175,speed:97, status:null,item:"Choice Band",     types:["Water","Fighting"], tera:false },
-        { name:"Calyrex-Ice",   hp:90, max_hp:175,speed:50, status:null,item:"Weakness Policy", types:["Psychic","Ice"],    tera:false },
+        { name:"Urshifu-Rapid", hp:100,max_hp:175,status:null,item:"Choice Band",     types:["Water","Fighting"], tera:false },
+        { name:"Calyrex-Ice",   hp:90, max_hp:175,status:null,item:"Weakness Policy", types:["Psychic","Ice"],    tera:false },
       ],
       opp_side:[
-        { name:"Dondozo",    hp:100,max_hp:285,speed:35,status:null,item:"Leftovers",    types:["Water"],           tera:false },
-        { name:"Tatsugiri",  hp:100,max_hp:131,speed:75,status:null,item:"Choice Scarf", types:["Dragon","Water"],  tera:false },
+        { name:"Dondozo",    hp:100,max_hp:285,status:null,item:"Leftovers",    types:["Water"],           tera:false },
+        { name:"Tatsugiri",  hp:100,max_hp:131,status:null,item:"Choice Scarf", types:["Dragon","Water"],  tera:false },
       ],
       field:{ weather:null, terrain:null, trick_room:false, tailwind:{your:false,opp:false} },
     },
@@ -132,12 +132,12 @@ const PUZZLES = [
     prompt:"Trick Room is active (3 turns remaining). The opponent switches in Choice Scarf Tornadus. Which side controls the speed order — who moves first?",
     game_state:{
       your_side:[
-        { name:"Porygon2",  hp:100,max_hp:177,speed:60, status:null,item:"Eviolite",     types:["Normal"],          tera:false },
-        { name:"Amoonguss", hp:100,max_hp:190,speed:30, status:null,item:"Rocky Helmet", types:["Grass","Poison"],  tera:false },
+        { name:"Porygon2",  hp:100,max_hp:177,status:null,item:"Eviolite",     types:["Normal"],          tera:false },
+        { name:"Amoonguss", hp:100,max_hp:190,status:null,item:"Rocky Helmet", types:["Grass","Poison"],  tera:false },
       ],
       opp_side:[
-        { name:"Tornadus",   hp:100,max_hp:167,speed:111,status:null,item:"Choice Scarf",  types:["Flying"],         tera:false },
-        { name:"Landorus-T", hp:85, max_hp:185,speed:91, status:null,item:"Rocky Helmet",  types:["Ground","Flying"],tera:false },
+        { name:"Tornadus",   hp:100,max_hp:167,status:null,item:"Choice Scarf",  types:["Flying"],         tera:false },
+        { name:"Landorus-T", hp:85, max_hp:185,status:null,item:"Rocky Helmet",  types:["Ground","Flying"],tera:false },
       ],
       field:{ weather:null, terrain:null, trick_room:true, trick_room_turns:3, tailwind:{your:false,opp:false} },
     },
@@ -249,11 +249,12 @@ function PokemonCard({ mon, back }) {
           <div style={{ width:`${hpPct}%`, background:hpBar(hpPct), height:"100%", transition:"width 0.4s" }}/>
         </div>
       </div>
-      {/* Stats row */}
-      <div style={{ display:"flex", gap:8, fontSize:10 }}>
-        <span style={{ color:"#64748b" }}>Spd <span style={{ color:"#c4b5fd", fontWeight:700 }}>{mon.speed}</span></span>
-        {mon.status && <span style={{ color:"#f59e0b", fontWeight:600 }}>{san(mon.status).toUpperCase()}</span>}
-      </div>
+      {/* Status */}
+      {mon.status && (
+        <div style={{ fontSize:10 }}>
+          <span style={{ color:"#f59e0b", fontWeight:600 }}>{san(mon.status).toUpperCase()}</span>
+        </div>
+      )}
       {/* Item text */}
       <div style={{ fontSize:9, color:"#475569", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
         {san(mon.item)}
@@ -406,7 +407,6 @@ export function PuzzlePageV2({ puzzle }) {
       name: poke.species,
       hp: poke.currentHp,
       max_hp: poke.maxHp,
-      speed: poke.stats?.spe || 0,
       status: poke.status,
       item: poke.item,
       types: [], // Would need to look up from a database
@@ -416,7 +416,6 @@ export function PuzzlePageV2({ puzzle }) {
       name: poke.species,
       hp: poke.currentHp,
       max_hp: poke.maxHp,
-      speed: poke.stats?.spe || 0,
       status: poke.status,
       item: poke.item,
       types: [],
