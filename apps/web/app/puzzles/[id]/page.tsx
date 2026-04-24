@@ -1,5 +1,5 @@
 import { PuzzlePageV2 } from "../../../components/vgc-puzzle-trainer-v2";
-import { getPuzzleById, getStaticPuzzleIds } from "@/lib/puzzles";
+import { getPuzzleById } from "@/lib/puzzles";
 
 /**
  * Puzzle page layout
@@ -18,12 +18,4 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
 
   return <PuzzlePageV2 puzzle={puzzle} />;
-}
-
-/**
- * Generate static params for known puzzles
- * This enables ISR (Incremental Static Regeneration)
- */
-export async function generateStaticParams() {
-  return getStaticPuzzleIds().map((id) => ({ id }));
 }
