@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, memo, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { RateLimiter } from "../lib/security";
-import { clearSessionUser, getAuthProviderStatus, getSessionUser, loginUser, type AuthProvider } from "../lib/auth-client";
+import { useAuth } from "../components/AuthProvider";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface PokemonSnapshot {
@@ -77,15 +78,9 @@ const sanitize = (s: string) =>
   String(s).replace(/[<>&"'`]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;","`":"&#96;"}[c] ?? c));
 
 const POKEAPI_ORIGIN = "https://pokeapi.co";
-const LOGIN_LOCK_MS = 30_000;
 interface PokemonMedia {
   sprite: string | null;
   cry: string | null;
-}
-interface LocalSessionUser {
-  email: string;
-  displayName: string;
-  loggedAt: number;
 }
 const mediaCache = new Map<string, PokemonMedia>();
 const POKEAPI_NAME_OVERRIDES: Record<string, string[]> = {
@@ -747,36 +742,28 @@ function ScoreScreen({ score, total, onRestart }: { score: number; total: number
 }
 
 function LoginPanel({
-  authUser,
-  loginEmail,
-  loginPassword,
-  loginBusy,
-  loginError,
-  lockedUntil,
-  authProvider,
-  backendConfigured,
   soundEnabled,
   onSoundToggle,
-  onEmailChange,
-  onPasswordChange,
-  onSubmit,
-  onLogout,
 }: {
-  authUser: LocalSessionUser | null;
-  loginEmail: string;
-  loginPassword: string;
-  loginBusy: boolean;
-  loginError: string | null;
-  lockedUntil: number;
-  authProvider: AuthProvider;
-  backendConfigured: boolean;
   soundEnabled: boolean;
   onSoundToggle: () => void;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  onLogout: () => void;
 }) {
+  const router = useRouter();
+  const {
+    user,
+    isAuthenticated,
+    backendConfigured,
+    login,
+    logout,
+  } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const limiterRef = useRef(new RateLimiter(5, 60_000));
+
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (lockedUntil <= Date.now()) return;
@@ -785,18 +772,56 @@ function LoginPanel({
   }, [lockedUntil]);
   const lockedSeconds = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const lockActive = lockedSeconds > 0;
+
   const authModeText = backendConfigured
     ? "AUTH: BACKEND"
     : "AUTH: BACKEND UNCONFIGURED";
 
+  const onSubmit = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (busy) return;
+
+      const current = Date.now();
+      if (lockedUntil > current) {
+        setError(`Too many attempts. Try again in ${Math.ceil((lockedUntil - current) / 1000)} seconds.`);
+        return;
+      }
+      if (!limiterRef.current.isAllowed("landing-login")) {
+        setLockedUntil(current + 30_000);
+        setError("Too many login attempts. Please wait before trying again.");
+        return;
+      }
+
+      setBusy(true);
+      setError(null);
+      const result = await login({ email, password });
+      setBusy(false);
+
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+
+      setEmail("");
+      setPassword("");
+    },
+    [busy, email, lockedUntil, password, login]
+  );
+
+  const onLogout = useCallback(() => {
+    logout();
+    router.push("/login");
+  }, [logout, router]);
+
   return (
-    <section className="login-panel" aria-label="Frontend login tools">
+    <section className="login-panel" aria-label="Trainer login">
       <div className="login-title-row">
         <div>
-          <div className="login-eyebrow">SECURE FRONTEND LOGIN</div>
-          <h2 className="login-title">Session Access</h2>
-          <p className="login-note">Prototype mode only: password stays in-memory and is never persisted.</p>
-          <span className={`auth-mode-badge ${authProvider === "backend" ? "auth-mode-backend" : "auth-mode-local"}`}>
+          <div className="login-eyebrow">TRAINER LOGIN</div>
+          <h2 className="login-title">Welcome Back</h2>
+          <p className="login-note">Sign in to track your puzzle progress and streaks.</p>
+          <span className={`auth-mode-badge ${backendConfigured ? "auth-mode-backend" : "auth-mode-local"}`}>
             {authModeText}
           </span>
         </div>
@@ -805,10 +830,10 @@ function LoginPanel({
         </button>
       </div>
 
-      {authUser ? (
+      {isAuthenticated && user ? (
         <div className="login-success-row">
           <p className="login-note">
-            Logged in as <strong>{authUser.displayName}</strong> ({authUser.email})
+            Logged in as <strong>{user.displayName}</strong> ({user.email})
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a href="/account" className="panel-link-btn">ACCOUNT</a>
@@ -821,22 +846,22 @@ function LoginPanel({
             <span>Email</span>
             <input
               type="email"
-              value={loginEmail}
-              onChange={(e) => onEmailChange(e.currentTarget.value)}
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
               maxLength={120}
               required
               inputMode="email"
               autoComplete="username"
               className="login-input"
-              placeholder="trainer@vgc.local"
+              placeholder="trainer@example.com"
             />
           </label>
           <label className="login-field">
             <span>Password</span>
             <input
               type="password"
-              value={loginPassword}
-              onChange={(e) => onPasswordChange(e.currentTarget.value)}
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
               maxLength={120}
               minLength={8}
               required
@@ -845,10 +870,13 @@ function LoginPanel({
               placeholder="At least 8 characters"
             />
           </label>
-          <button type="submit" className="login-submit-btn" disabled={loginBusy || lockActive}>
-            {loginBusy ? "SIGNING IN..." : lockActive ? `WAIT ${lockedSeconds}s` : "SIGN IN"}
+          <button type="submit" className="login-submit-btn" disabled={busy || lockActive}>
+            {busy ? "SIGNING IN..." : lockActive ? `WAIT ${lockedSeconds}s` : "SIGN IN"}
           </button>
-          {loginError && <p className="login-error">{loginError}</p>}
+          {error && <p className="login-error">{error}</p>}
+          <p className="login-note" style={{ marginTop: 8, fontSize: 11 }}>
+            No account? <a href="/register" style={{ color: "#7db4ff" }}>Register here</a>
+          </p>
         </form>
       )}
     </section>
@@ -857,6 +885,9 @@ function LoginPanel({
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function Page() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
   const [idx, setIdx]           = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -864,36 +895,7 @@ export default function Page() {
   const [done, setDone]         = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [authProvider, setAuthProvider] = useState<AuthProvider>("local");
-  const [backendConfigured, setBackendConfigured] = useState(false);
-  const [authUser, setAuthUser] = useState<LocalSessionUser | null>(null);
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [lockedUntil, setLockedUntil] = useState(0);
-  const loginLimiterRef = useRef(new RateLimiter(5, 60_000));
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
-
-  const refreshAuthProvider = useCallback(() => {
-    const status = getAuthProviderStatus();
-    setAuthProvider(status.provider);
-    setBackendConfigured(status.backendConfigured);
-  }, []);
-
-  useEffect(() => {
-    const parsed = getSessionUser();
-    if (!parsed) return;
-    setAuthUser({
-      email: parsed.email,
-      displayName: parsed.displayName,
-      loggedAt: parsed.loggedAt,
-    });
-  }, []);
-
-  useEffect(() => {
-    refreshAuthProvider();
-  }, [refreshAuthProvider]);
 
   useEffect(() => {
     const closeMenu = (event: MouseEvent) => {
@@ -940,50 +942,11 @@ export default function Page() {
     setIdx(0); setSelected(null); setRevealed(false); setResults([]); setDone(false);
   }, []);
 
-  const onLoginSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (loginBusy) return;
-
-    const now = Date.now();
-    if (lockedUntil > now) {
-      setLoginError(`Too many attempts. Try again in ${Math.ceil((lockedUntil - now) / 1000)} seconds.`);
-      return;
-    }
-
-    if (!loginLimiterRef.current.isAllowed("frontend-login")) {
-      setLockedUntil(now + LOGIN_LOCK_MS);
-      setLoginError("Too many login attempts. Please wait before trying again.");
-      return;
-    }
-
-    setLoginBusy(true);
-    setLoginError(null);
-    const result = await loginUser({ email: loginEmail, password: loginPassword });
-    setLoginBusy(false);
-    if (!result.ok) {
-      setLoginError(result.message);
-      return;
-    }
-    setAuthUser({
-      email: result.user.email,
-      displayName: result.user.displayName,
-      loggedAt: result.user.loggedAt,
-    });
-    setLoginPassword("");
-    refreshAuthProvider();
-  }, [lockedUntil, loginBusy, loginEmail, loginPassword, refreshAuthProvider]);
-
   const onLogout = useCallback(() => {
     setShowProfileMenu(false);
-    setAuthUser(null);
-    setLoginPassword("");
-    setLoginError(null);
-    clearSessionUser();
-    refreshAuthProvider();
-    if (typeof window !== "undefined") {
-      window.location.assign("/login");
-    }
-  }, [refreshAuthProvider]);
+    logout();
+    router.push("/login");
+  }, [logout, router]);
 
   const streak = (() => {
     let s = 0;
@@ -1319,7 +1282,7 @@ export default function Page() {
                   aria-haspopup="menu"
                 >
                   <span className="profile-dot" />
-                  {authUser?.displayName ?? "Trainer"}
+                  {user?.displayName ?? "Trainer"}
                 </button>
                 {showProfileMenu && (
                   <div className="profile-menu" role="menu">
@@ -1333,20 +1296,8 @@ export default function Page() {
           </header>
 
           <LoginPanel
-            authUser={authUser}
-            loginEmail={loginEmail}
-            loginPassword={loginPassword}
-            loginBusy={loginBusy}
-            loginError={loginError}
-            lockedUntil={lockedUntil}
-            authProvider={authProvider}
-            backendConfigured={backendConfigured}
             soundEnabled={soundEnabled}
             onSoundToggle={() => setSoundEnabled((v) => !v)}
-            onEmailChange={setLoginEmail}
-            onPasswordChange={setLoginPassword}
-            onSubmit={onLoginSubmit}
-            onLogout={onLogout}
           />
 
           {done ? (

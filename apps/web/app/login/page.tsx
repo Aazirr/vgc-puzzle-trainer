@@ -1,76 +1,108 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { RateLimiter } from "@/lib/security";
-import { getAuthProviderStatus, getSessionUser, loginUser, type AuthProvider } from "@/lib/auth-client";
+import { useAuth } from "@/components/AuthProvider";
 import styles from "../auth.module.css";
 
 const LOGIN_LOCK_MS = 30_000;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isLoading, isAuthenticated, backendConfigured, login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lockedUntil, setLockedUntil] = useState(0);
-  const [authProvider, setAuthProvider] = useState<AuthProvider>("local");
-  const [backendConfigured, setBackendConfigured] = useState(false);
   const limiterRef = useRef(new RateLimiter(5, 60_000));
 
+  // Redirect already-authenticated users
   useEffect(() => {
-    const existing = getSessionUser();
-    if (existing) {
-      router.replace("/");
+    if (!isLoading && isAuthenticated) {
+      const next = searchParams.get("next");
+      const destination = next && next.startsWith("/") ? next : "/";
+      router.replace(destination);
     }
-    const status = getAuthProviderStatus();
-    setAuthProvider(status.provider);
-    setBackendConfigured(status.backendConfigured);
-  }, [router]);
+  }, [isLoading, isAuthenticated, searchParams, router]);
 
-  const onSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (busy) return;
+  const onSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (busy) return;
 
-    const now = Date.now();
-    if (lockedUntil > now) {
-      setError(`Too many attempts. Try again in ${Math.ceil((lockedUntil - now) / 1000)} seconds.`);
-      return;
-    }
-    if (!limiterRef.current.isAllowed("login-route")) {
-      setLockedUntil(now + LOGIN_LOCK_MS);
-      setError("Too many login attempts. Please wait and retry.");
-      return;
-    }
+      const now = Date.now();
+      if (lockedUntil > now) {
+        setError(
+          `Too many attempts. Try again in ${Math.ceil(
+            (lockedUntil - now) / 1000
+          )} seconds.`
+        );
+        return;
+      }
+      if (!limiterRef.current.isAllowed("login-route")) {
+        setLockedUntil(now + LOGIN_LOCK_MS);
+        setError("Too many login attempts. Please wait and retry.");
+        return;
+      }
 
-    setBusy(true);
-    setError(null);
-    const result = await loginUser({ email, password });
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
+      setBusy(true);
+      setError(null);
+      const result = await login({ email, password });
+      setBusy(false);
 
-    const next = typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("next")
-      : null;
-    const nextPath = next && next.startsWith("/") ? next : "/";
-    const status = getAuthProviderStatus();
-    setAuthProvider(status.provider);
-    setBackendConfigured(status.backendConfigured);
-    router.replace(nextPath);
-  }, [busy, email, lockedUntil, password, router]);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+
+      const next = searchParams.get("next");
+      const destination = next && next.startsWith("/") ? next : "/";
+      router.replace(destination);
+    },
+    [busy, email, lockedUntil, password, login, searchParams, router]
+  );
+
+  // Show nothing while checking auth state to prevent flash
+  if (isLoading) {
+    return (
+      <main className={styles.authMain}>
+        <section className={styles.authCard}>
+          <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
+          <h1 className={styles.title}>Loading...</h1>
+        </section>
+      </main>
+    );
+  }
+
+  // If already authenticated, the useEffect above will redirect.
+  // Render a brief "Redirecting..." to avoid flash if redirect is async.
+  if (isAuthenticated) {
+    return (
+      <main className={styles.authMain}>
+        <section className={styles.authCard}>
+          <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
+          <h1 className={styles.title}>Redirecting...</h1>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.authMain}>
       <section className={styles.authCard}>
         <div className={styles.eyebrow}>VGC PUZZLE TRAINER</div>
         <h1 className={styles.title}>Welcome Back</h1>
-        <p className={styles.subtitle}>Sign in to continue your puzzle sessions and sound settings.</p>
-        <span className={`${styles.modeBadge} ${backendConfigured ? styles.modeBackend : styles.modeLocal}`}>
+        <p className={styles.subtitle}>Sign in to track your puzzle progress and streaks.</p>
+        <span
+          className={`${styles.modeBadge} ${
+            backendConfigured ? styles.modeBackend : styles.modeLocal
+          }`}
+        >
           {backendConfigured ? "AUTH: BACKEND" : "AUTH: BACKEND UNCONFIGURED"}
         </span>
 
@@ -85,6 +117,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.currentTarget.value)}
               required
               maxLength={120}
+              placeholder="trainer@example.com"
             />
           </label>
           <label className={styles.field}>
@@ -98,6 +131,7 @@ export default function LoginPage() {
               required
               maxLength={120}
               minLength={8}
+              placeholder="At least 8 characters"
             />
           </label>
           <button className={styles.primaryBtn} type="submit" disabled={busy}>
@@ -107,10 +141,15 @@ export default function LoginPage() {
         </form>
 
         <div className={styles.footerRow}>
-          <Link className={styles.link} href="/register">Need an account? Register</Link>
-          <Link className={styles.link} href="/">Back to app</Link>
+          <Link className={styles.link} href="/register">
+            Need an account? Register
+          </Link>
+          <Link className={styles.link} href="/">
+            Back to app
+          </Link>
         </div>
       </section>
     </main>
   );
 }
+

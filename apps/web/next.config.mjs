@@ -26,7 +26,7 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
 
-  // Security
+  // Security headers
   headers: async () => {
     return [
       {
@@ -52,6 +52,10 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
         ],
       },
     ];
@@ -67,9 +71,7 @@ const nextConfig = {
       },
     ];
   },
-
-  // Webpack optimizations - simplified (custom splitChunks can interfere with Next.js cache)
-
 };
 
 export default nextConfig;
+

@@ -8,23 +8,19 @@ export interface AuthUser {
 
 export type AuthProvider = "backend" | "local";
 
-interface LocalAccount {
-  email: string;
-  displayName: string;
-  passwordHash: string;
-  createdAt: number;
-}
-
 export interface AuthInput {
   email: string;
   password: string;
   displayName?: string;
 }
 
+export type AuthResult =
+  | { ok: true; user: AuthUser }
+  | { ok: false; message: string };
+
 const SESSION_KEY = "vgc.frontend.session.v1";
-const ACCOUNTS_KEY = "vgc.frontend.accounts.v1";
 const SESSION_COOKIE = "vgc_session";
-const AUTH_PROVIDER_KEY = "vgc.frontend.auth_provider.v1";
+
 const AUTH_API_BASE = (process.env.NEXT_PUBLIC_AUTH_API_BASE ?? "").trim();
 const API_URL_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
@@ -32,7 +28,7 @@ function normalizeApiBase(input: string): string {
   return input.trim().replace(/\/+$/, "");
 }
 
-function getAuthApiBase(): string {
+export function getAuthApiBase(): string {
   if (AUTH_API_BASE) return normalizeApiBase(AUTH_API_BASE);
   if (API_URL_BASE) return normalizeApiBase(API_URL_BASE);
 
@@ -73,45 +69,14 @@ async function hashPassword(password: string): Promise<string> {
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function readLocalAccounts(): LocalAccount[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(ACCOUNTS_KEY);
-  if (!raw) return [];
-  const parsed = safeJsonParse<LocalAccount[] | null>(raw, null);
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter((item) =>
-    item &&
-    typeof item.email === "string" &&
-    typeof item.displayName === "string" &&
-    typeof item.passwordHash === "string" &&
-    typeof item.createdAt === "number"
-  );
-}
-
-function readStoredProvider(): AuthProvider | null {
-  if (typeof window === "undefined") return null;
-  const value = window.localStorage.getItem(AUTH_PROVIDER_KEY);
-  if (value === "backend" || value === "local") return value;
-  return null;
-}
-
-function writeStoredProvider(provider: AuthProvider): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(AUTH_PROVIDER_KEY, provider);
-}
-
-function writeLocalAccounts(accounts: LocalAccount[]): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-}
-
 function updateSessionCookie(isAuthenticated: boolean): void {
   if (typeof document === "undefined") return;
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const sameSite = "; SameSite=Lax"; // Lax allows cookie on top-level navigations
   if (isAuthenticated) {
-    document.cookie = `${SESSION_COOKIE}=1; Path=/; SameSite=Strict${secure}`;
+    document.cookie = `${SESSION_COOKIE}=1; Path=/; SameSite=Lax${secure}`;
   } else {
-    document.cookie = `${SESSION_COOKIE}=; Max-Age=0; Path=/; SameSite=Strict${secure}`;
+    document.cookie = `${SESSION_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
   }
 }
 
@@ -126,23 +91,24 @@ function toAuthUser(email: string, displayName: string): AuthUser {
 function extractApiUser(payload: unknown): AuthUser | null {
   if (!payload || typeof payload !== "object") return null;
   const obj = payload as Record<string, unknown>;
-  const maybeUser = (obj.user && typeof obj.user === "object"
+  const maybeUser = obj.user && typeof obj.user === "object"
     ? obj.user
-    : obj) as Record<string, unknown>;
+    : obj;
+  const userObj = maybeUser as Record<string, unknown>;
 
-  if (typeof maybeUser.email !== "string" || typeof maybeUser.displayName !== "string") {
+  if (typeof userObj.email !== "string" || typeof userObj.displayName !== "string") {
     return null;
   }
   return toAuthUser(
-    normalizeEmail(maybeUser.email),
-    sanitizeInput(maybeUser.displayName).trim().slice(0, 32) || "trainer"
+    normalizeEmail(userObj.email),
+    sanitizeInput(userObj.displayName).trim().slice(0, 32) || "trainer"
   );
 }
 
 async function tryApiAuth(
   path: "login" | "register",
   input: AuthInput
-): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
+): Promise<AuthResult> {
   const apiBase = getAuthApiBase();
   if (!apiBase) {
     return {
@@ -223,7 +189,7 @@ export function getAuthProviderStatus(): {
   };
 }
 
-export async function registerUser(input: AuthInput): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
+export async function registerUser(input: AuthInput): Promise<AuthResult> {
   const email = normalizeEmail(input.email);
   const password = input.password;
   const displayName = normalizeDisplayName(input.displayName, email);
@@ -234,21 +200,20 @@ export async function registerUser(input: AuthInput): Promise<{ ok: true; user: 
   if (!getAuthApiBase()) {
     return {
       ok: false,
-      message:
-        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+      message: "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
     };
   }
 
   const apiResult = await tryApiAuth("register", { email, password, displayName });
   if (!apiResult.ok) {
-    return { ok: false, message: apiResult.message };
+    return apiResult;
   }
 
   persistSession(apiResult.user);
   return { ok: true, user: apiResult.user };
 }
 
-export async function loginUser(input: AuthInput): Promise<{ ok: true; user: AuthUser } | { ok: false; message: string }> {
+export async function loginUser(input: AuthInput): Promise<AuthResult> {
   const email = normalizeEmail(input.email);
   const password = input.password;
 
@@ -258,16 +223,20 @@ export async function loginUser(input: AuthInput): Promise<{ ok: true; user: Aut
   if (!getAuthApiBase()) {
     return {
       ok: false,
-      message:
-        "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
+      message: "Authentication API is not configured. Set NEXT_PUBLIC_AUTH_API_BASE or NEXT_PUBLIC_API_URL.",
     };
   }
 
   const apiResult = await tryApiAuth("login", { email, password });
   if (!apiResult.ok) {
-    return { ok: false, message: apiResult.message };
+    return apiResult;
   }
 
   persistSession(apiResult.user);
   return { ok: true, user: apiResult.user };
 }
+
+export async function logoutUser(): Promise<void> {
+  clearSessionUser();
+}
+

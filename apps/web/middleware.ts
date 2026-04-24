@@ -2,16 +2,21 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 /**
- * Middleware for security headers and request validation
- * Runs on all requests
+ * Middleware for security headers and auth routing
+ * Runs on all page requests
  */
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hasSession = request.cookies.get("vgc_session")?.value === "1";
-  const protectedPaths = ["/", "/account"];
-  const authPaths = ["/login", "/register"];
-  const isProtected = protectedPaths.includes(pathname) || pathname.startsWith("/puzzles");
 
+  // Protected paths require authentication
+  const protectedPaths = ["/account"];
+  const authPaths = ["/login", "/register"];
+
+  const isProtected = protectedPaths.includes(pathname);
+  const isAuthPath = authPaths.includes(pathname);
+
+  // Redirect unauthenticated users away from protected pages
   if (isProtected && !hasSession) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
@@ -19,14 +24,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (authPaths.includes(pathname) && hasSession) {
+  // Redirect authenticated users away from auth pages
+  if (isAuthPath && hasSession) {
+    const next = request.nextUrl.searchParams.get("next");
+    const destination = next && next.startsWith("/") ? next : "/";
     const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
+    homeUrl.pathname = destination;
     homeUrl.search = "";
     return NextResponse.redirect(homeUrl);
   }
 
   const response = NextResponse.next();
+
+  // Build auth API origin for CSP
   const authApiBase = (
     process.env.NEXT_PUBLIC_AUTH_API_BASE ??
     process.env.NEXT_PUBLIC_API_URL ??
@@ -42,10 +52,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Security Headers
-  response.headers.set(
-    "X-Content-Type-Options",
-    "nosniff"
-  );
+  response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -53,6 +60,7 @@ export function middleware(request: NextRequest) {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()"
   );
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
 
   // CSP Header
   const cspHeader =
@@ -65,7 +73,8 @@ export function middleware(request: NextRequest) {
     `connect-src 'self' https://pokeapi.co https://raw.githubusercontent.com vercel.live ${authApiOrigin}; ` +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
-    "form-action 'self';";
+    "form-action 'self';" +
+    "upgrade-insecure-requests;";
 
   response.headers.set("Content-Security-Policy", cspHeader);
 
@@ -87,8 +96,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
+

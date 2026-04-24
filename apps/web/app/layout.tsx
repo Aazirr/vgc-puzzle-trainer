@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { AuthProvider } from "@/components/AuthProvider";
 import { siteMetadata } from "../lib/metadata";
 
 export const metadata: Metadata = siteMetadata;
@@ -17,8 +18,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="icon" href="/favicon.ico" />
         <meta name="theme-color" content="#6366f1" />
       </head>
-<body suppressHydrationWarning>{children}</body>
-
+      <body suppressHydrationWarning>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
+
