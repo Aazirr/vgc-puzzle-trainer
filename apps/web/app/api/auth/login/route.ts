@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 function getBackendBase(): string {
-  const apiBase = (process.env.AUTH_API_BASE ?? process.env.API_URL ?? "").trim().replace(/\/+$/, "");
+  const apiBase = (
+    process.env.AUTH_API_BASE ??
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_AUTH_API_BASE ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ""
+  ).trim().replace(/\/+$/, "");
   if (apiBase) return apiBase;
   return "http://localhost:3001";
 }
