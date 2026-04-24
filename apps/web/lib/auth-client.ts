@@ -42,6 +42,8 @@ export function getAuthApiBase(): string {
     ) {
       return "http://localhost:3001";
     }
+    // On production (Vercel, custom domain), use same-origin proxy
+    return window.location.origin;
   }
 
   return "";
