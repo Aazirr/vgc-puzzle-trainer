@@ -24,6 +24,6 @@ Fix all frontend routing, auth, security, and design issues for production deplo
 - [x] C. Create `apps/web/app/api/auth/login/route.ts` — proxy to backend
 - [x] D. Fix `apps/web/next.config.mjs` — add `/auth/:path*` rewrite to proxy
 - [x] E. Fix `apps/web/middleware.ts` — ensure CSP allows same-origin auth
-- [ ] F. Create `frontend` branch and commit changes
-- [ ] G. Push `frontend` branch to origin
+- [x] F. Create `frontend` branch and commit changes
+- [x] G. Push `frontend` branch to origin
 
