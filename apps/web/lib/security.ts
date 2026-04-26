@@ -4,8 +4,23 @@
 
 /**
  * Sanitize user input to prevent XSS
+ * Falls back to basic escaping when running server-side (no DOM).
  */
 export function sanitizeInput(input: string): string {
+  if (typeof document === "undefined") {
+    // Server-side fallback: basic HTML escaping
+    const htmlEscapes: Record<string, string> = {
+      "&": "amp",
+      "<": "lt",
+      ">": "gt",
+      '"': "quot",
+      "'": "#39",
+    };
+    return String(input).replace(/[&<>"']/g, (char) => {
+      const code = htmlEscapes[char];
+      return code ? "&" + code + ";" : char;
+    });
+  }
   const div = document.createElement("div");
   div.textContent = input;
   return div.innerHTML;
@@ -137,3 +152,4 @@ export class RateLimiter {
     return true;
   }
 }
+

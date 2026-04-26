@@ -1,4 +1,4 @@
-import { PuzzlePageV2 } from "../../../components/vgc-puzzle-trainer-v2";
+import { PuzzlePageV2 } from "@/components/vgc-puzzle-trainer-v2";
 import { getPuzzleById } from "@/lib/puzzles";
 
 /**
@@ -12,10 +12,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     return (
       <main style={{ padding: "2rem", textAlign: "center" }}>
         <h1>Puzzle not found</h1>
-        <p>The puzzle you're looking for doesn't exist.</p>
+        <p>The puzzle you&apos;re looking for doesn&apos;t exist.</p>
       </main>
     );
   }
 
   return <PuzzlePageV2 puzzle={puzzle} />;
 }
+

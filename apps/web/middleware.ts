@@ -73,7 +73,7 @@ export function middleware(request: NextRequest) {
     `connect-src 'self' https://pokeapi.co https://raw.githubusercontent.com vercel.live ${authApiOrigin}; ` +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
-    "form-action 'self';" +
+    "form-action 'self'; " +
     "upgrade-insecure-requests;";
 
   response.headers.set("Content-Security-Policy", cspHeader);
